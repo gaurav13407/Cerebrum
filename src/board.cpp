@@ -34,6 +34,20 @@ namespace  {
     return '.';
 }
 } 
+
+Piece Board::pieceAt(int square) const {
+    if (square < 0 || square >= 64) {
+        return Piece::None;
+    }
+
+    const std::uint64_t squareBit = bit(square);
+    for (int p = 0; p < 12; ++p) {
+        if ((pieces[p] & squareBit) != 0) {
+            return static_cast<Piece>(p);
+        }
+    }
+    return Piece::None;
+}
 void Board::clear() {
     pieces.fill(0);
     occupancy.fill(0);
@@ -99,15 +113,8 @@ void Board::removePiece(Piece piece, int square) {
 
         for (int file = 0; file < 8; ++file) {
             const int square = rank * 8 + file;
-            char shown = '.';
-
-            for (int p = 0; p < 12; ++p) {
-                if ((pieces[p] & bit(square)) != 0) {
-                    shown = pieceCharacter(static_cast<Piece>(p));
-                    break;
-                }
-            }
-
+            const Piece piece = pieceAt(square);
+            const char shown = pieceCharacter(piece);
             std::cout << shown << ' ';
         }
         std::cout << '\n';
