@@ -48,6 +48,20 @@ Piece Board::pieceAt(int square) const {
     }
     return Piece::None;
 }
+
+    void Board::movePiece(int from,int to){
+        if(from<0 || from>=64 || to<0 || to>=64){
+            return;
+        }
+        const Piece piece=pieceAt(from);
+
+        // For now only one move to an empty square 
+        if (piece == Piece::None || pieceAt(to) != Piece::None) {
+            return;
+        }
+        removePiece(piece,from);
+        putPiece(piece,to);
+    }
 void Board::clear() {
     pieces.fill(0);
     occupancy.fill(0);

@@ -42,5 +42,8 @@ struct Board{
     void putPiece(Piece piece,int square);
     void removePiece(Piece peice,int square);
     Piece pieceAt(int square) const;
+
+    // Move Peice 
+    void movePiece(int from,int to);
     
 };
