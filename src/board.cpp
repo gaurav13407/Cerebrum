@@ -49,19 +49,72 @@ Piece Board::pieceAt(int square) const {
     return Piece::None;
 }
 
-    void Board::movePiece(int from,int to){
-        if(from<0 || from>=64 || to<0 || to>=64){
-            return;
-        }
-        const Piece piece=pieceAt(from);
-
-        // For now only one move to an empty square 
-        if (piece == Piece::None || pieceAt(to) != Piece::None) {
-            return;
-        }
-        removePiece(piece,from);
-        putPiece(piece,to);
+bool Board::isPseudoLegalMove(int from, int to) const {
+    if (from < 0 || from >= 64 || to < 0 || to >= 64 || from == to) {
+        return false;
     }
+
+    const Piece movingPiece = pieceAt(from);
+    const Piece targetPiece = pieceAt(to);
+
+    if (movingPiece == Piece::None || colorOf(movingPiece) != sideToMove) {
+        return false;
+    }
+
+    if (targetPiece != Piece::None &&
+        colorOf(movingPiece) == colorOf(targetPiece)) {
+        return false;
+    }
+
+    // This first version validates pawns only.
+    if (movingPiece != Piece::WhitePawn && movingPiece != Piece::BlackPawn) {
+        return false;
+    }
+
+    const int direction = (colorOf(movingPiece) == Color::White) ? 8 : -8;
+    const int fileDifference = (to % 8) - (from % 8);
+
+    // One square forward into an empty square.
+    if (to == from + direction && targetPiece == Piece::None) {
+        return true;
+    }
+
+    // Two squares forward from the starting rank, with both squares empty.
+    const int startingRank = (colorOf(movingPiece) == Color::White) ? 1 : 6;
+    if (from / 8 == startingRank &&
+        to == from + 2 * direction &&
+        targetPiece == Piece::None &&
+        pieceAt(from + direction) == Piece::None) {
+        return true;
+    }
+
+    // One square diagonally forward to capture an opposing piece.
+    if (to == from + direction + fileDifference &&
+        (fileDifference == -1 || fileDifference == 1) &&
+        targetPiece != Piece::None) {
+        return true;
+    }
+
+    return false;
+}
+
+void Board::movePiece(int from, int to) {
+    if (!isPseudoLegalMove(from, to)) {
+        return;
+    }
+
+    const Piece movingPiece = pieceAt(from);
+    const Piece targetPiece = pieceAt(to);
+
+    if (targetPiece != Piece::None) {
+        removePiece(targetPiece, to);
+    }
+
+    removePiece(movingPiece, from);
+    putPiece(movingPiece, to);
+
+    sideToMove = (sideToMove == Color::White) ? Color::Black : Color::White;
+}
 void Board::clear() {
     pieces.fill(0);
     occupancy.fill(0);

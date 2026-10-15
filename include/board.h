@@ -45,5 +45,6 @@ struct Board{
 
     // Move Peice 
     void movePiece(int from,int to);
+    bool isPseudoLegalMove(int from, int to) const;
     
 };
