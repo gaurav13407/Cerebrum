@@ -91,6 +91,30 @@ int main() {
     assert(board.pieceAt(11) == Piece::WhitePawn); // d2 still occupied
     assert(board.pieceAt(20) == Piece::None);
     assert(board.sideToMove == Color::White);
+} 
+
+// Rook moves straight when the path is clear.
+{
+    Board board;
+    board.clear();
+    board.putPiece(Piece::WhiteRook, 0); // a1
+    board.movePiece(0, 24);             // a1 to a4
+
+    assert(board.pieceAt(0) == Piece::None);
+    assert(board.pieceAt(24) == Piece::WhiteRook);
+    assert(board.sideToMove == Color::Black);
+}
+
+// Rook cannot jump over the pawn on a2.
+{
+    Board board;
+    board.setStartingPosition();
+    board.movePiece(0, 24);             // a1 to a4
+
+    assert(board.pieceAt(0) == Piece::WhiteRook);
+    assert(board.pieceAt(8) == Piece::WhitePawn); // a2 still occupied
+    assert(board.pieceAt(24) == Piece::None);
+    assert(board.sideToMove == Color::White);
 }
 
     std::cout << "All move checks passed.\n";

@@ -104,7 +104,38 @@ bool Board::isPseudoLegalMove(int from, int to) const {
             rank+=rankStep;
         }
         return true;
+    } 
+    //Rooks move validation 
+    if (movingPiece == Piece::WhiteRook ||
+    movingPiece == Piece::BlackRook) {
+    const int fromFile = from % 8;
+    const int fromRank = from / 8;
+    const int toFile = to % 8;
+    const int toRank = to / 8;
+
+    // A rook must move along the same file or rank.
+    if (fromFile != toFile && fromRank != toRank) {
+        return false;
     }
+
+    const int fileStep =
+        (toFile > fromFile) ? 1 : (toFile < fromFile ? -1 : 0);
+    const int rankStep =
+        (toRank > fromRank) ? 1 : (toRank < fromRank ? -1 : 0);
+
+    int file = fromFile + fileStep;
+    int rank = fromRank + rankStep;
+
+    while (file != toFile || rank != toRank) {
+        if (pieceAt(rank * 8 + file) != Piece::None) {
+            return false;
+        }
+        file += fileStep;
+        rank += rankStep;
+    }
+
+    return true;
+}
     // This version validates pawns and knights only.
     if (movingPiece != Piece::WhitePawn && movingPiece != Piece::BlackPawn) {
         return false;
