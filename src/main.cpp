@@ -116,6 +116,40 @@ int main() {
     assert(board.pieceAt(24) == Piece::None);
     assert(board.sideToMove == Color::White);
 }
+// Queen moves straight when the path is clear: d4 to d7.
+{
+    Board board;
+    board.clear();
+    board.putPiece(Piece::WhiteQueen, 27); // d4
+    board.movePiece(27, 51);              // d4 to d7
+
+    assert(board.pieceAt(27) == Piece::None);
+    assert(board.pieceAt(51) == Piece::WhiteQueen);
+    assert(board.sideToMove == Color::Black);
+}
+
+// Queen moves diagonally when the path is clear: d4 to g7.
+{
+    Board board;
+    board.clear();
+    board.putPiece(Piece::WhiteQueen, 27); // d4
+    board.movePiece(27, 54);              // d4 to g7
+
+    assert(board.pieceAt(27) == Piece::None);
+    assert(board.pieceAt(54) == Piece::WhiteQueen);
+}
+
+// Queen cannot jump over the pawn on d2.
+{
+    Board board;
+    board.setStartingPosition();
+    board.movePiece(3, 27);              // d1 to d4
+
+    assert(board.pieceAt(3) == Piece::WhiteQueen);
+    assert(board.pieceAt(11) == Piece::WhitePawn); // d2 still occupied
+    assert(board.pieceAt(27) == Piece::None);
+    assert(board.sideToMove == Color::White);
+}
 
     std::cout << "All move checks passed.\n";
 }

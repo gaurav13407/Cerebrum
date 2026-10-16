@@ -136,6 +136,42 @@ bool Board::isPseudoLegalMove(int from, int to) const {
 
     return true;
 }
+    //Queen Validate Move 
+    if (movingPiece == Piece::WhiteQueen ||
+    movingPiece == Piece::BlackQueen) {
+    const int fromFile = from % 8;
+    const int fromRank = from / 8;
+    const int toFile = to % 8;
+    const int toRank = to / 8;
+
+    const int fileDistance = std::abs(toFile - fromFile);
+    const int rankDistance = std::abs(toRank - fromRank);
+
+    const bool straight = (fromFile == toFile || fromRank == toRank);
+    const bool diagonal = (fileDistance == rankDistance);
+
+    if (!straight && !diagonal) {
+        return false;
+    }
+
+    const int fileStep =
+        (toFile > fromFile) ? 1 : (toFile < fromFile ? -1 : 0);
+    const int rankStep =
+        (toRank > fromRank) ? 1 : (toRank < fromRank ? -1 : 0);
+
+    int file = fromFile + fileStep;
+    int rank = fromRank + rankStep;
+
+    while (file != toFile || rank != toRank) {
+        if (pieceAt(rank * 8 + file) != Piece::None) {
+            return false;
+        }
+        file += fileStep;
+        rank += rankStep;
+    }
+
+    return true;
+}
     // This version validates pawns and knights only.
     if (movingPiece != Piece::WhitePawn && movingPiece != Piece::BlackPawn) {
         return false;
