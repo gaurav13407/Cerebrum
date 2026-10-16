@@ -69,5 +69,29 @@ int main() {
     assert(board.sideToMove == Color::Black);
 }
 
+     // Bishop moves diagonally when the path is clear.
+{
+    Board board;
+    board.clear();
+    board.putPiece(Piece::WhiteBishop, 2);  // c1
+    board.movePiece(2, 20);                 // c1 to e3
+
+    assert(board.pieceAt(2) == Piece::None);
+    assert(board.pieceAt(20) == Piece::WhiteBishop);
+    assert(board.sideToMove == Color::Black);
+}
+
+// Bishop cannot jump over the pawn on d2.
+{
+    Board board;
+    board.setStartingPosition();
+    board.movePiece(2, 20);                 // c1 to e3
+
+    assert(board.pieceAt(2) == Piece::WhiteBishop);
+    assert(board.pieceAt(11) == Piece::WhitePawn); // d2 still occupied
+    assert(board.pieceAt(20) == Piece::None);
+    assert(board.sideToMove == Color::White);
+}
+
     std::cout << "All move checks passed.\n";
 }

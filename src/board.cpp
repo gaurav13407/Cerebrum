@@ -1,6 +1,7 @@
 #include "board.h"
 #include <cstdlib>
 #include <cstdint>
+#include <filesystem>
 #include <iostream>
 
 namespace  {
@@ -77,7 +78,33 @@ bool Board::isPseudoLegalMove(int from, int to) const {
     }
 
     // Bishop move validation 
+    if(movingPiece==Piece::WhiteBishop ||
+            movingPiece==Piece::BlackBishop){
+        const int fromFile=from%8;
+        const int fromRank=from/8;
+        const int toFile=to%8;
+        const int toRank=to/8;
 
+        const int fileDistance=std::abs(toFile-fromFile);
+        const int rankDistance=std::abs(toRank-fromRank);
+        if(fileDistance ==0 || fileDistance !=rankDistance){
+            return false;
+        }
+
+        const int fileStep=(toFile>fromFile) ? 1:-1;
+        const int rankStep=(toRank>fromRank) ? 1 :-1;
+        int file=fileStep+fromFile;
+        int rank=rankStep+fromRank;
+
+        while(file!=toFile && rank!=toRank){
+            if(pieceAt(rank*8+file)!=Piece::None){
+                return false;
+            }
+            file+=fileStep;
+            rank+=rankStep;
+        }
+        return true;
+    }
     // This version validates pawns and knights only.
     if (movingPiece != Piece::WhitePawn && movingPiece != Piece::BlackPawn) {
         return false;
