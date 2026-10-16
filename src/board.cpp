@@ -1,5 +1,5 @@
 #include "board.h"
-
+#include <cstdlib>
 #include <cstdint>
 #include <iostream>
 
@@ -66,7 +66,19 @@ bool Board::isPseudoLegalMove(int from, int to) const {
         return false;
     }
 
-    // This first version validates pawns only.
+    // Knight move validateation
+    if (movingPiece == Piece::WhiteKnight ||
+        movingPiece == Piece::BlackKnight) {
+        const int fileDistance = std::abs((to % 8) - (from % 8));
+        const int rankDistance = std::abs((to / 8) - (from / 8));
+
+        return (fileDistance == 1 && rankDistance == 2) ||
+               (fileDistance == 2 && rankDistance == 1);
+    }
+
+    // Bishop move validation 
+
+    // This version validates pawns and knights only.
     if (movingPiece != Piece::WhitePawn && movingPiece != Piece::BlackPawn) {
         return false;
     }

@@ -57,7 +57,17 @@ int main() {
         assert(board.pieceAt(28) == Piece::None);
         assert(board.pieceAt(35) == Piece::WhitePawn);
         assert(board.sideToMove == Color::Black);
-    }
+    } 
+     // Knight jumps from b1 to c3.
+{
+    Board board;
+    board.setStartingPosition();
+    board.movePiece(1, 18);
 
-    std::cout << "All pawn move checks passed.\n";
+    assert(board.pieceAt(1) == Piece::None);
+    assert(board.pieceAt(18) == Piece::WhiteKnight);
+    assert(board.sideToMove == Color::Black);
+}
+
+    std::cout << "All move checks passed.\n";
 }
