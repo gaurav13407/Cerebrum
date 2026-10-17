@@ -197,5 +197,41 @@ int main() {
     assert(!board.isSquareAttacked(28, Color::Black)); // e4
 }
 
-  std::cout << "All move checks passed.\n";
+  // Knight, king, bishop, rook, and queen attack detection.
+  {
+    Board board;
+
+    board.clear();
+    board.putPiece(Piece::WhiteKnight, 18); // c3
+    assert(board.isSquareAttacked(1, Color::White));
+    assert(board.isSquareAttacked(35, Color::White));
+    assert(!board.isSquareAttacked(26, Color::White));
+
+    board.clear();
+    board.putPiece(Piece::WhiteKing, 28); // e4
+    assert(board.isSquareAttacked(35, Color::White));
+    assert(!board.isSquareAttacked(44, Color::White));
+
+    board.clear();
+    board.putPiece(Piece::WhiteBishop, 2); // c1
+    assert(board.isSquareAttacked(38, Color::White)); // g5
+    board.putPiece(Piece::WhitePawn, 11); // d2 blocks the diagonal
+    assert(!board.isSquareAttacked(38, Color::White));
+
+    board.clear();
+    board.putPiece(Piece::WhiteRook, 0); // a1
+    assert(board.isSquareAttacked(56, Color::White)); // a8
+    board.putPiece(Piece::BlackPawn, 24); // a4 blocks the rook
+    assert(!board.isSquareAttacked(56, Color::White));
+
+    board.clear();
+    board.putPiece(Piece::WhiteQueen, 27); // d4
+    assert(board.isSquareAttacked(59, Color::White)); // d8, straight
+    assert(board.isSquareAttacked(63, Color::White)); // h8, diagonal
+  }
+
+  assert(!Board{}.isSquareAttacked(-1, Color::White));
+  assert(!Board{}.isSquareAttacked(64, Color::Black));
+
+  std::cout << "All move and attack checks passed.\n";
 }

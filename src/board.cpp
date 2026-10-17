@@ -1,4 +1,5 @@
 #include "board.h"
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <filesystem>
@@ -64,29 +65,110 @@ bool Board::isSquareAttacked(int square, Color byColor) const {
         return false;
     }
 
-    constexpr std::uint64_t fileA = 0x0101010101010101ULL;
-    constexpr std::uint64_t fileH = 0x8080808080808080ULL;
-    const std::uint64_t targetBit = bit(square);
+    const int targetFile = square % 8;
+    const int targetRank = square / 8;
 
-    if (byColor == Color::White) {
-        const std::uint64_t whitePawns =
-            pieces[static_cast<int>(Piece::WhitePawn)];
+    // Pawns attack diagonally, even when the target square is empty.
+    const Piece attackingPawn =
+        (byColor == Color::White) ? Piece::WhitePawn : Piece::BlackPawn;
+    const int pawnSourceRank =
+        targetRank + ((byColor == Color::White) ? -1 : 1);
 
-        const std::uint64_t attacks =
-            ((whitePawns & ~fileA) << 7) |
-            ((whitePawns & ~fileH) << 9);
-
-        return (attacks & targetBit) != 0;
+    if (pawnSourceRank >= 0 && pawnSourceRank < 8) {
+        constexpr int pawnFileOffsets[2] = {-1, 1};
+        for (int fileOffset : pawnFileOffsets) {
+            const int file = targetFile + fileOffset;
+            if (file >= 0 && file < 8 &&
+                pieceAt(pawnSourceRank * 8 + file) == attackingPawn) {
+                return true;
+            }
+        }
     }
 
-    const std::uint64_t blackPawns =
-        pieces[static_cast<int>(Piece::BlackPawn)];
+    // Knights attack from any of these eight source squares.
+    const Piece attackingKnight =
+        (byColor == Color::White) ? Piece::WhiteKnight : Piece::BlackKnight;
+    constexpr int knightOffsets[8][2] = {
+        {1, 2}, {2, 1}, {2, -1}, {1, -2},
+        {-1, -2}, {-2, -1}, {-2, 1}, {-1, 2}
+    };
 
-    const std::uint64_t attacks =
-        ((blackPawns & ~fileA) >> 9) |
-        ((blackPawns & ~fileH) >> 7);
+    for (const auto& offset : knightOffsets) {
+        const int file = targetFile + offset[0];
+        const int rank = targetRank + offset[1];
+        if (file >= 0 && file < 8 && rank >= 0 && rank < 8 &&
+            pieceAt(rank * 8 + file) == attackingKnight) {
+            return true;
+        }
+    }
 
-    return (attacks & targetBit) != 0;
+    // An opposing king attacks each adjacent square.
+    const Piece attackingKing =
+        (byColor == Color::White) ? Piece::WhiteKing : Piece::BlackKing;
+    for (int rankOffset = -1; rankOffset <= 1; ++rankOffset) {
+        for (int fileOffset = -1; fileOffset <= 1; ++fileOffset) {
+            if (fileOffset == 0 && rankOffset == 0) {
+                continue;
+            }
+
+            const int file = targetFile + fileOffset;
+            const int rank = targetRank + rankOffset;
+            if (file >= 0 && file < 8 && rank >= 0 && rank < 8 &&
+                pieceAt(rank * 8 + file) == attackingKing) {
+                return true;
+            }
+        }
+    }
+
+    // Scan outward from the target; the first piece on a ray blocks anything
+    // behind it and attacks only if it is the appropriate opposing slider.
+    constexpr int orthogonalDirections[4][2] = {
+        {1, 0}, {-1, 0}, {0, 1}, {0, -1}
+    };
+    for (const auto& direction : orthogonalDirections) {
+        int file = targetFile + direction[0];
+        int rank = targetRank + direction[1];
+
+        while (file >= 0 && file < 8 && rank >= 0 && rank < 8) {
+            const Piece piece = pieceAt(rank * 8 + file);
+            if (piece != Piece::None) {
+                const bool isRookOrQueen =
+                    piece == Piece::WhiteRook || piece == Piece::BlackRook ||
+                    piece == Piece::WhiteQueen || piece == Piece::BlackQueen;
+                if (colorOf(piece) == byColor && isRookOrQueen) {
+                    return true;
+                }
+                break;
+            }
+            file += direction[0];
+            rank += direction[1];
+        }
+    }
+
+    constexpr int diagonalDirections[4][2] = {
+        {1, 1}, {1, -1}, {-1, 1}, {-1, -1}
+    };
+    for (const auto& direction : diagonalDirections) {
+        int file = targetFile + direction[0];
+        int rank = targetRank + direction[1];
+
+        while (file >= 0 && file < 8 && rank >= 0 && rank < 8) {
+            const Piece piece = pieceAt(rank * 8 + file);
+            if (piece != Piece::None) {
+                const bool isBishopOrQueen =
+                    piece == Piece::WhiteBishop || piece == Piece::BlackBishop ||
+                    piece == Piece::WhiteQueen || piece == Piece::BlackQueen;
+                if (colorOf(piece) == byColor && isBishopOrQueen) {
+                    return true;
+                }
+                break;
+            }
+            file += direction[0];
+            rank += direction[1];
+        }
+    }
+
+    return false;
 }
 
 bool Board::isPseudoLegalMove(int from, int to) const {
