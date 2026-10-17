@@ -22,13 +22,19 @@ enum class Piece : std::uint8_t {
   None = 255
 };
 
+enum CastlingRight : std::uint8_t{
+    WhiteKingSide =1 <<0,
+    WhiteQueenSide = 1 <<1,
+    BlackKingSide =1 <<2,
+    BlackQueenSide=1 <<3,
+};
+
 struct Board {
   // One bitboard per peice type and color
   std::array<std::uint64_t, 12> pieces{};
 
   // Combined occuancy bitboard, useful for move generation
   std::array<std::uint64_t, 2> occupancy{};
-
   Color sideToMove = Color::White;
   int enPassantSquare = -1; // Target square for the immediately available en passant capture.
 
@@ -47,4 +53,7 @@ struct Board {
   bool isSquareAttacked(int square, Color byColor) const;
   bool isInCheck(Color color) const;
   bool isLegalMove(int from,int to, Piece promotion=Piece::None) const;
+
+  // Castling Rights 
+  std::uint8_t castlingRights = 0;
 };

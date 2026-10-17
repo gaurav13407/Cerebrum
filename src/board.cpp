@@ -111,10 +111,33 @@ bool Board::isLegalMove(int from, int to, Piece promotion) const {
         return false;
     }
 
+    const bool isCastling =
+        (movingPiece == Piece::WhiteKing || movingPiece == Piece::BlackKing) &&
+        std::abs(to - from) == 2;
+
     // A king is checked, never captured.
     if (targetPiece == Piece::WhiteKing || targetPiece == Piece::BlackKing) {
         return false;
     }
+
+    if (isCastling) {
+        const Color kingColor = colorOf(movingPiece);
+        const Color enemyColor =
+            (kingColor == Color::White) ? Color::Black : Color::White;
+        if (isInCheck(kingColor)) {
+            return false;
+        }
+
+        // Test the transit square after the king has vacated its start square.
+        const int transitSquare = from + ((to > from) ? 1 : -1);
+        Board transitPosition = *this;
+        transitPosition.removePiece(movingPiece, from);
+        transitPosition.putPiece(movingPiece, transitSquare);
+        if (transitPosition.isSquareAttacked(transitSquare, enemyColor)) {
+            return false;
+        }
+    }
+
     // Try the move on a copy so the real board stays untouched.
     Board next = *this;
     if (targetPiece != Piece::None) {
@@ -136,6 +159,14 @@ bool Board::isLegalMove(int from, int to, Piece promotion) const {
     }
     next.removePiece(movingPiece, from);
     next.putPiece(promotes ? promotion : movingPiece, to);
+
+    if (isCastling) {
+        const int rookFrom = (to > from) ? from + 3 : from - 4;
+        const int rookTo = (to > from) ? from + 1 : from - 1;
+        const Piece rook = pieceAt(rookFrom);
+        next.removePiece(rook, rookFrom);
+        next.putPiece(rook, rookTo);
+    }
 
     return !next.isInCheck(colorOf(movingPiece));
 }
@@ -366,8 +397,34 @@ bool Board::isPseudoLegalMove(int from, int to) const {
     return true;
   }
 
-  // King move validation
+  // King moves and castling.
   if (movingPiece == Piece::WhiteKing || movingPiece == Piece::BlackKing) {
+    if (movingPiece == Piece::WhiteKing && from == 4) {
+      if (to == 6 && (castlingRights & WhiteKingSide) != 0 &&
+          pieceAt(7) == Piece::WhiteRook && pieceAt(5) == Piece::None &&
+          pieceAt(6) == Piece::None) {
+        return true;
+      }
+      if (to == 2 && (castlingRights & WhiteQueenSide) != 0 &&
+          pieceAt(0) == Piece::WhiteRook && pieceAt(1) == Piece::None &&
+          pieceAt(2) == Piece::None && pieceAt(3) == Piece::None) {
+        return true;
+      }
+    }
+
+    if (movingPiece == Piece::BlackKing && from == 60) {
+      if (to == 62 && (castlingRights & BlackKingSide) != 0 &&
+          pieceAt(63) == Piece::BlackRook && pieceAt(61) == Piece::None &&
+          pieceAt(62) == Piece::None) {
+        return true;
+      }
+      if (to == 58 && (castlingRights & BlackQueenSide) != 0 &&
+          pieceAt(56) == Piece::BlackRook && pieceAt(57) == Piece::None &&
+          pieceAt(58) == Piece::None && pieceAt(59) == Piece::None) {
+        return true;
+      }
+    }
+
     const int fileDistance = std::abs((to % 8) - (from % 8));
     const int rankDistance = std::abs((to / 8) - (from / 8));
 
@@ -421,6 +478,39 @@ void Board::movePiece(int from, int to, Piece promotion) {
 
   const Piece movingPiece = pieceAt(from);
   const Piece targetPiece = pieceAt(to);
+  const bool isCastling =
+      (movingPiece == Piece::WhiteKing || movingPiece == Piece::BlackKing) &&
+      std::abs(to - from) == 2;
+
+  // Moving a king permanently removes both castling rights for that side.
+  if (movingPiece == Piece::WhiteKing) {
+    castlingRights &= static_cast<std::uint8_t>(~(WhiteKingSide | WhiteQueenSide));
+  } else if (movingPiece == Piece::BlackKing) {
+    castlingRights &= static_cast<std::uint8_t>(~(BlackKingSide | BlackQueenSide));
+  }
+
+  // Moving a rook from its original square removes that side's right.
+  if (movingPiece == Piece::WhiteRook && from == 0) {
+    castlingRights &= static_cast<std::uint8_t>(~WhiteQueenSide);
+  } else if (movingPiece == Piece::WhiteRook && from == 7) {
+    castlingRights &= static_cast<std::uint8_t>(~WhiteKingSide);
+  } else if (movingPiece == Piece::BlackRook && from == 56) {
+    castlingRights &= static_cast<std::uint8_t>(~BlackQueenSide);
+  } else if (movingPiece == Piece::BlackRook && from == 63) {
+    castlingRights &= static_cast<std::uint8_t>(~BlackKingSide);
+  }
+
+  // Capturing a rook on its original square also removes its castling right.
+  if (targetPiece == Piece::WhiteRook && to == 0) {
+    castlingRights &= static_cast<std::uint8_t>(~WhiteQueenSide);
+  } else if (targetPiece == Piece::WhiteRook && to == 7) {
+    castlingRights &= static_cast<std::uint8_t>(~WhiteKingSide);
+  } else if (targetPiece == Piece::BlackRook && to == 56) {
+    castlingRights &= static_cast<std::uint8_t>(~BlackQueenSide);
+  } else if (targetPiece == Piece::BlackRook && to == 63) {
+    castlingRights &= static_cast<std::uint8_t>(~BlackKingSide);
+  }
+
   const int fileDifference = (to % 8) - (from % 8);
   const bool enPassantCapture =
       (movingPiece == Piece::WhitePawn || movingPiece == Piece::BlackPawn) &&
@@ -444,6 +534,15 @@ void Board::movePiece(int from, int to, Piece promotion) {
       (movingPiece == Piece::BlackPawn && to / 8 == 0);
   putPiece(promotes ? promotion : movingPiece, to);
 
+  // Castling also moves the rook beside the king.
+  if (isCastling) {
+    const int rookFrom = (to > from) ? from + 3 : from - 4;
+    const int rookTo = (to > from) ? from + 1 : from - 1;
+    const Piece rook = pieceAt(rookFrom);
+    removePiece(rook, rookFrom);
+    putPiece(rook, rookTo);
+  }
+
   // A two-square pawn move creates an en passant target for one turn.
   enPassantSquare = -1;
   if ((movingPiece == Piece::WhitePawn || movingPiece == Piece::BlackPawn) &&
@@ -458,6 +557,7 @@ void Board::clear() {
   occupancy.fill(0);
   sideToMove = Color::White;
   enPassantSquare = -1;
+  castlingRights = 0;
 }
 
 void Board::putPiece(Piece piece, int square) {
@@ -482,7 +582,8 @@ void Board::removePiece(Piece piece, int square) {
 
 void Board::setStartingPosition() {
   clear();
-
+  castlingRights = WhiteKingSide | WhiteQueenSide |
+                   BlackKingSide | BlackQueenSide;
   // White back rank: a1 through h1.
   putPiece(Piece::WhiteRook, 0);
   putPiece(Piece::WhiteKnight, 1);

@@ -373,5 +373,126 @@ int main() {
     assert(board.sideToMove == Color::Black);
 }
 
-  std::cout << "All move, attack, and king-safety checks passed.\n";
+  // White kingside castling moves both king and rook.
+  {
+    Board board;
+    board.clear();
+    board.putPiece(Piece::WhiteKing, 4); // e1
+    board.putPiece(Piece::WhiteRook, 7); // h1
+    board.putPiece(Piece::BlackKing, 60); // e8
+    board.castlingRights = WhiteKingSide;
+
+    assert(board.isLegalMove(4, 6));
+    board.movePiece(4, 6);
+    assert(board.pieceAt(4) == Piece::None);
+    assert(board.pieceAt(6) == Piece::WhiteKing);
+    assert(board.pieceAt(7) == Piece::None);
+    assert(board.pieceAt(5) == Piece::WhiteRook);
+    assert((board.castlingRights & WhiteKingSide) == 0);
+  }
+
+  // White queenside castling moves the rook from a1 to d1.
+  {
+    Board board;
+    board.clear();
+    board.putPiece(Piece::WhiteKing, 4); // e1
+    board.putPiece(Piece::WhiteRook, 0); // a1
+    board.putPiece(Piece::BlackKing, 60); // e8
+    board.castlingRights = WhiteQueenSide;
+
+    assert(board.isLegalMove(4, 2));
+    board.movePiece(4, 2);
+    assert(board.pieceAt(2) == Piece::WhiteKing);
+    assert(board.pieceAt(3) == Piece::WhiteRook);
+    assert(board.pieceAt(0) == Piece::None);
+  }
+
+  // Black kingside castling.
+  {
+    Board board;
+    board.clear();
+    board.sideToMove = Color::Black;
+    board.putPiece(Piece::WhiteKing, 4); // e1
+    board.putPiece(Piece::BlackKing, 60); // e8
+    board.putPiece(Piece::BlackRook, 63); // h8
+    board.castlingRights = BlackKingSide;
+
+    assert(board.isLegalMove(60, 62));
+    board.movePiece(60, 62);
+    assert(board.pieceAt(62) == Piece::BlackKing);
+    assert(board.pieceAt(61) == Piece::BlackRook);
+    assert(board.pieceAt(63) == Piece::None);
+  }
+
+  // Black queenside castling.
+  {
+    Board board;
+    board.clear();
+    board.sideToMove = Color::Black;
+    board.putPiece(Piece::WhiteKing, 4); // e1
+    board.putPiece(Piece::BlackKing, 60); // e8
+    board.putPiece(Piece::BlackRook, 56); // a8
+    board.castlingRights = BlackQueenSide;
+
+    assert(board.isLegalMove(60, 58));
+    board.movePiece(60, 58);
+    assert(board.pieceAt(58) == Piece::BlackKing);
+    assert(board.pieceAt(59) == Piece::BlackRook);
+    assert(board.pieceAt(56) == Piece::None);
+  }
+
+  // Castling is rejected if a path square is occupied or attacked.
+  {
+    Board board;
+    board.clear();
+    board.putPiece(Piece::WhiteKing, 4);
+    board.putPiece(Piece::WhiteRook, 7);
+    board.putPiece(Piece::WhiteBishop, 5); // blocks f1
+    board.castlingRights = WhiteKingSide;
+    assert(!board.isLegalMove(4, 6));
+
+    board.clear();
+    board.putPiece(Piece::WhiteKing, 4);
+    board.putPiece(Piece::WhiteRook, 7);
+    board.putPiece(Piece::BlackKing, 60);
+    board.putPiece(Piece::BlackRook, 61); // attacks f1, the transit square
+    board.castlingRights = WhiteKingSide;
+    assert(!board.isLegalMove(4, 6));
+
+    board.clear();
+    board.putPiece(Piece::WhiteKing, 4);
+    board.putPiece(Piece::WhiteRook, 7);
+    board.putPiece(Piece::BlackKing, 60);
+    board.putPiece(Piece::BlackRook, 62); // attacks g1, the destination
+    board.castlingRights = WhiteKingSide;
+    assert(!board.isLegalMove(4, 6));
+  }
+
+  // A rook moving from or being captured on its original square removes that
+  // side's corresponding castling right.
+  {
+    Board board;
+    board.clear();
+    board.putPiece(Piece::WhiteKing, 4);
+    board.putPiece(Piece::WhiteRook, 7);
+    board.putPiece(Piece::BlackKing, 60);
+    board.castlingRights = WhiteKingSide;
+
+    board.movePiece(7, 15); // h1 to h2
+    assert((board.castlingRights & WhiteKingSide) == 0);
+
+    board.clear();
+    board.sideToMove = Color::Black;
+    board.putPiece(Piece::WhiteKing, 4);
+    board.putPiece(Piece::BlackKing, 60);
+    board.putPiece(Piece::WhiteRook, 7); // h1
+    board.putPiece(Piece::BlackRook, 63); // h8
+    board.castlingRights = WhiteKingSide;
+
+    board.movePiece(63, 7); // Black rook captures the rook on h1.
+    assert(board.pieceAt(7) == Piece::BlackRook);
+    assert((board.castlingRights & WhiteKingSide) == 0);
+  }
+
+  std::cout << "All move, attack, king-safety, and castling checks passed.\n";
 }
