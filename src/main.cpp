@@ -353,5 +353,25 @@ int main() {
     assert(board.sideToMove == Color::White);
 }
 
+// En passant is available immediately after an opposing pawn moves two squares.
+{
+    Board board;
+    board.clear();
+    board.putPiece(Piece::WhitePawn, 36); // e5
+    board.putPiece(Piece::BlackPawn, 51); // d7
+    board.sideToMove = Color::Black;
+
+    board.movePiece(51, 35); // d7 to d5; en passant target is d6 (43)
+    assert(board.enPassantSquare == 43);
+    assert(board.pieceAt(35) == Piece::BlackPawn);
+
+    board.movePiece(36, 43); // e5 captures en passant on d6
+    assert(board.pieceAt(36) == Piece::None);
+    assert(board.pieceAt(35) == Piece::None); // captured pawn removed from d5
+    assert(board.pieceAt(43) == Piece::WhitePawn);
+    assert(board.enPassantSquare == -1);
+    assert(board.sideToMove == Color::Black);
+}
+
   std::cout << "All move, attack, and king-safety checks passed.\n";
 }

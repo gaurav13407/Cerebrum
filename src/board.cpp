@@ -120,6 +120,20 @@ bool Board::isLegalMove(int from, int to, Piece promotion) const {
     if (targetPiece != Piece::None) {
         next.removePiece(targetPiece, to);
     }
+    const int fileDifference = (to % 8) - (from % 8);
+    const bool enPassantCapture =
+        (movingPiece == Piece::WhitePawn || movingPiece == Piece::BlackPawn) &&
+        targetPiece == Piece::None && to == enPassantSquare &&
+        (fileDifference == -1 || fileDifference == 1);
+    if (enPassantCapture) {
+        const int direction =
+            (colorOf(movingPiece) == Color::White) ? 8 : -8;
+        const int capturedSquare = to - direction;
+        const Piece capturedPawn = pieceAt(capturedSquare);
+        if (capturedPawn != Piece::None) {
+            next.removePiece(capturedPawn, capturedSquare);
+        }
+    }
     next.removePiece(movingPiece, from);
     next.putPiece(promotes ? promotion : movingPiece, to);
 
@@ -381,9 +395,20 @@ bool Board::isPseudoLegalMove(int from, int to) const {
 
   // One square diagonally forward to capture an opposing piece.
   if (to == from + direction + fileDifference &&
-      (fileDifference == -1 || fileDifference == 1) &&
-      targetPiece != Piece::None) {
-    return true;
+      (fileDifference == -1 || fileDifference == 1)) {
+    if (targetPiece != Piece::None) {
+      return true;
+    }
+
+    // En passant: the captured pawn is beside the destination square.
+    if (to == enPassantSquare) {
+      const int capturedSquare = to - direction;
+      const Piece expectedPawn =
+          (colorOf(movingPiece) == Color::White)
+              ? Piece::BlackPawn
+              : Piece::WhitePawn;
+      return pieceAt(capturedSquare) == expectedPawn;
+    }
   }
 
   return false;
@@ -396,9 +421,20 @@ void Board::movePiece(int from, int to, Piece promotion) {
 
   const Piece movingPiece = pieceAt(from);
   const Piece targetPiece = pieceAt(to);
+  const int fileDifference = (to % 8) - (from % 8);
+  const bool enPassantCapture =
+      (movingPiece == Piece::WhitePawn || movingPiece == Piece::BlackPawn) &&
+      targetPiece == Piece::None && to == enPassantSquare &&
+      (fileDifference == -1 || fileDifference == 1);
 
   if (targetPiece != Piece::None) {
     removePiece(targetPiece, to);
+  }
+
+  if (enPassantCapture) {
+    const int direction =
+        (colorOf(movingPiece) == Color::White) ? 8 : -8;
+    removePiece(pieceAt(to - direction), to - direction);
   }
 
   removePiece(movingPiece, from);
@@ -408,12 +444,20 @@ void Board::movePiece(int from, int to, Piece promotion) {
       (movingPiece == Piece::BlackPawn && to / 8 == 0);
   putPiece(promotes ? promotion : movingPiece, to);
 
+  // A two-square pawn move creates an en passant target for one turn.
+  enPassantSquare = -1;
+  if ((movingPiece == Piece::WhitePawn || movingPiece == Piece::BlackPawn) &&
+      std::abs(to - from) == 16) {
+    enPassantSquare = (from + to) / 2;
+  }
+
   sideToMove = (sideToMove == Color::White) ? Color::Black : Color::White;
 }
 void Board::clear() {
   pieces.fill(0);
   occupancy.fill(0);
   sideToMove = Color::White;
+  enPassantSquare = -1;
 }
 
 void Board::putPiece(Piece piece, int square) {

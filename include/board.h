@@ -30,6 +30,7 @@ struct Board {
   std::array<std::uint64_t, 2> occupancy{};
 
   Color sideToMove = Color::White;
+  int enPassantSquare = -1; // Target square for the immediately available en passant capture.
 
   void clear();
   void setStartingPosition();
