@@ -41,9 +41,9 @@ struct Board {
   Piece pieceAt(int square) const;
 
   // Move Peice
-  void movePiece(int from, int to);
+  void movePiece(int from, int to, Piece promotion=Piece::None);
   bool isPseudoLegalMove(int from, int to) const;
   bool isSquareAttacked(int square, Color byColor) const;
   bool isInCheck(Color color) const;
-  bool isLegalMove(int from,int to) const;
+  bool isLegalMove(int from,int to, Piece promotion=Piece::None) const;
 };

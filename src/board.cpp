@@ -14,6 +14,18 @@ constexpr int pieceIndex(Piece piece) { return static_cast<int>(piece); }
 constexpr Color colorOf(Piece piece) {
   return pieceIndex(piece) < 6 ? Color::White : Color::Black;
 }
+bool isPromotionPiece(Piece piece, Color color) {
+    if(color==Color::White){
+        return piece==Piece::WhiteQueen||
+            piece==Piece::WhiteRook||
+            piece==Piece::WhiteBishop||
+            piece==Piece::WhiteKnight;
+    }
+    return piece==Piece::BlackQueen||
+        piece==Piece::BlackRook||
+        piece==Piece::BlackBishop||
+        piece==Piece::BlackKnight;
+}
 char pieceCharacter(Piece piece) {
   switch (piece) {
   case Piece::WhitePawn:
@@ -79,26 +91,37 @@ bool Board::isInCheck(Color color) const{
     return isSquareAttacked(kingSquare,attacker);
 }
 
-//legal move in which it reject move that put king under attack 
-bool Board::isLegalMove(int from,int to) const {
-    if(!isPseudoLegalMove(from,to)){
-        return false;
-    }
-    const Piece movingPiece=pieceAt(from);
-    const Piece targetPiece=pieceAt(to);
 
-    // A king is checked never capture 
-    if(targetPiece==Piece::WhiteKing||
-            targetPiece==Piece::BlackKing){
+//legal move in which it reject move that put king under attack 
+bool Board::isLegalMove(int from, int to, Piece promotion) const {
+    if (!isPseudoLegalMove(from, to)) {
         return false;
     }
-    // try the move on a copy so real bitbord stay untouched 
-    Board next = * this ;
-    if(targetPiece!=Piece::None){
-        next.removePiece(targetPiece,to);
+    const Piece movingPiece = pieceAt(from);
+    const Piece targetPiece = pieceAt(to);
+
+    const bool promotes =
+        (movingPiece == Piece::WhitePawn && to / 8 == 7) ||
+        (movingPiece == Piece::BlackPawn && to / 8 == 0);
+    if (promotes) {
+        if (!isPromotionPiece(promotion, colorOf(movingPiece))) {
+            return false;
+        }
+    } else if (promotion != Piece::None) {
+        return false;
     }
-    next.removePiece(movingPiece,from);
-    next.putPiece(movingPiece,to);
+
+    // A king is checked, never captured.
+    if (targetPiece == Piece::WhiteKing || targetPiece == Piece::BlackKing) {
+        return false;
+    }
+    // Try the move on a copy so the real board stays untouched.
+    Board next = *this;
+    if (targetPiece != Piece::None) {
+        next.removePiece(targetPiece, to);
+    }
+    next.removePiece(movingPiece, from);
+    next.putPiece(promotes ? promotion : movingPiece, to);
 
     return !next.isInCheck(colorOf(movingPiece));
 }
@@ -366,8 +389,8 @@ bool Board::isPseudoLegalMove(int from, int to) const {
   return false;
 }
 
-void Board::movePiece(int from, int to) {
-  if (!isLegalMove(from, to)) {
+void Board::movePiece(int from, int to, Piece promotion) {
+  if (!isLegalMove(from, to, promotion)) {
     return;
   }
 
@@ -379,16 +402,11 @@ void Board::movePiece(int from, int to) {
   }
 
   removePiece(movingPiece, from);
-  putPiece(movingPiece, to);
 
-  if(movingPiece==Piece::WhitePawn && to /8 ==7){
-      removePiece(Piece::WhitePawn,to);
-      putPiece(Piece::WhiteQueen,to);
-  }
-  if (movingPiece == Piece::BlackPawn && to / 8 == 0) {
-      removePiece(Piece::BlackPawn,to);
-      putPiece(Piece::BlackQueen,to);
-  }
+  const bool promotes =
+      (movingPiece == Piece::WhitePawn && to / 8 == 7) ||
+      (movingPiece == Piece::BlackPawn && to / 8 == 0);
+  putPiece(promotes ? promotion : movingPiece, to);
 
   sideToMove = (sideToMove == Color::White) ? Color::Black : Color::White;
 }

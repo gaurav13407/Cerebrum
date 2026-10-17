@@ -297,7 +297,7 @@ int main() {
     Board board;
     board.clear();
     board.putPiece(Piece::WhitePawn, 48); // a7
-    board.movePiece(48, 56);              // a7 to a8
+    board.movePiece(48, 56, Piece::WhiteQueen); // a7 to a8
 
     assert(board.pieceAt(48) == Piece::None);
     assert(board.pieceAt(56) == Piece::WhiteQueen);
@@ -310,10 +310,46 @@ int main() {
     board.clear();
     board.sideToMove = Color::Black;
     board.putPiece(Piece::BlackPawn, 8); // a2
-    board.movePiece(8, 0);               // a2 to a1
+    board.movePiece(8, 0, Piece::BlackQueen); // a2 to a1
 
     assert(board.pieceAt(8) == Piece::None);
     assert(board.pieceAt(0) == Piece::BlackQueen);
+    assert(board.sideToMove == Color::White);
+}
+
+// White can underpromote to a knight.
+{
+    Board board;
+    board.clear();
+    board.putPiece(Piece::WhitePawn, 48); // a7
+    board.movePiece(48, 56, Piece::WhiteKnight);
+
+    assert(board.pieceAt(48) == Piece::None);
+    assert(board.pieceAt(56) == Piece::WhiteKnight);
+    assert(board.sideToMove == Color::Black);
+}
+
+// Promotion without a choice is rejected.
+{
+    Board board;
+    board.clear();
+    board.putPiece(Piece::WhitePawn, 48); // a7
+    board.movePiece(48, 56);
+
+    assert(board.pieceAt(48) == Piece::WhitePawn);
+    assert(board.pieceAt(56) == Piece::None);
+    assert(board.sideToMove == Color::White);
+}
+
+// A pawn cannot promote to a piece of the other color.
+{
+    Board board;
+    board.clear();
+    board.putPiece(Piece::WhitePawn, 48); // a7
+    board.movePiece(48, 56, Piece::BlackQueen);
+
+    assert(board.pieceAt(48) == Piece::WhitePawn);
+    assert(board.pieceAt(56) == Piece::None);
     assert(board.sideToMove == Color::White);
 }
 
