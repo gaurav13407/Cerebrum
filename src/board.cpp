@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
+#include <bit>
 
 namespace {
 constexpr std::uint64_t bit(int square) { return std::uint64_t{1} << square; }
@@ -58,6 +59,48 @@ Piece Board::pieceAt(int square) const {
     }
   }
   return Piece::None;
+}
+
+//To check which color of king is under attack 
+ 
+bool Board::isInCheck(Color color) const{
+    const Piece king=
+        (color == Color::White) ? Piece::WhiteKing : Piece::BlackKing;
+    const std::uint64_t kingBitboard=pieces[static_cast<int>(king)];
+
+    //Temproary test position may not conatin key 
+    if(kingBitboard==0){
+        return false;
+    }
+    const int kingSquare=std::countr_zero(kingBitboard);
+    const Color attacker=
+        (color==Color::White)?Color::Black : Color::White;
+
+    return isSquareAttacked(kingSquare,attacker);
+}
+
+//legal move in which it reject move that put king under attack 
+bool Board::isLegalMove(int from,int to) const {
+    if(!isPseudoLegalMove(from,to)){
+        return false;
+    }
+    const Piece movingPiece=pieceAt(from);
+    const Piece targetPiece=pieceAt(to);
+
+    // A king is checked never capture 
+    if(targetPiece==Piece::WhiteKing||
+            targetPiece==Piece::BlackKing){
+        return false;
+    }
+    // try the move on a copy so real bitbord stay untouched 
+    Board next = * this ;
+    if(targetPiece!=Piece::None){
+        next.removePiece(targetPiece,to);
+    }
+    next.removePiece(movingPiece,from);
+    next.putPiece(movingPiece,to);
+
+    return !next.isInCheck(colorOf(movingPiece));
 }
 
 bool Board::isSquareAttacked(int square, Color byColor) const {
@@ -324,7 +367,7 @@ bool Board::isPseudoLegalMove(int from, int to) const {
 }
 
 void Board::movePiece(int from, int to) {
-  if (!isPseudoLegalMove(from, to)) {
+  if (!isLegalMove(from, to)) {
     return;
   }
 

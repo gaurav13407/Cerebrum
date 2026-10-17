@@ -229,9 +229,69 @@ int main() {
     assert(board.isSquareAttacked(59, Color::White)); // d8, straight
     assert(board.isSquareAttacked(63, Color::White)); // h8, diagonal
   }
+    // A rook checks the king along an open file; a piece blocks the check.
+{
+    Board board;
+    board.clear();
+    board.putPiece(Piece::WhiteKing, 4);  // e1
+    board.putPiece(Piece::BlackRook, 60); // e8
+
+    assert(board.isInCheck(Color::White));
+
+    board.putPiece(Piece::WhitePawn, 28); // e4 blocks the rook
+    assert(!board.isInCheck(Color::White));
+}
 
   assert(!Board{}.isSquareAttacked(-1, Color::White));
   assert(!Board{}.isSquareAttacked(64, Color::Black));
 
-  std::cout << "All move and attack checks passed.\n";
+  // A pinned rook cannot move away and expose its king to check.
+  {
+    Board board;
+    board.clear();
+    board.putPiece(Piece::WhiteKing, 4);  // e1
+    board.putPiece(Piece::WhiteRook, 12); // e2, blocking the e-file
+    board.putPiece(Piece::BlackRook, 60); // e8
+
+    assert(!board.isLegalMove(12, 13)); // e2 to f2 exposes the king
+    board.movePiece(12, 13);
+
+    assert(board.pieceAt(12) == Piece::WhiteRook);
+    assert(board.pieceAt(13) == Piece::None);
+    assert(board.sideToMove == Color::White);
+  }
+
+  // The king cannot move onto a square attacked by a rook.
+  {
+    Board board;
+    board.clear();
+    board.putPiece(Piece::WhiteKing, 4);  // e1
+    board.putPiece(Piece::BlackRook, 60); // e8
+
+    assert(!board.isLegalMove(4, 12)); // e1 to e2 is still on the rook's file
+    board.movePiece(4, 12);
+
+    assert(board.pieceAt(4) == Piece::WhiteKing);
+    assert(board.pieceAt(12) == Piece::None);
+    assert(board.sideToMove == Color::White);
+  }
+
+  // The king can escape check by moving to a safe square.
+  {
+    Board board;
+    board.clear();
+    board.putPiece(Piece::WhiteKing, 4);  // e1
+    board.putPiece(Piece::BlackRook, 60); // e8
+
+    assert(board.isInCheck(Color::White));
+    assert(board.isLegalMove(4, 3)); // e1 to d1
+    board.movePiece(4, 3);
+
+    assert(board.pieceAt(4) == Piece::None);
+    assert(board.pieceAt(3) == Piece::WhiteKing);
+    assert(!board.isInCheck(Color::White));
+    assert(board.sideToMove == Color::Black);
+  }
+
+  std::cout << "All move, attack, and king-safety checks passed.\n";
 }
