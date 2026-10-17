@@ -381,6 +381,15 @@ void Board::movePiece(int from, int to) {
   removePiece(movingPiece, from);
   putPiece(movingPiece, to);
 
+  if(movingPiece==Piece::WhitePawn && to /8 ==7){
+      removePiece(Piece::WhitePawn,to);
+      putPiece(Piece::WhiteQueen,to);
+  }
+  if (movingPiece == Piece::BlackPawn && to / 8 == 0) {
+      removePiece(Piece::BlackPawn,to);
+      putPiece(Piece::BlackQueen,to);
+  }
+
   sideToMove = (sideToMove == Color::White) ? Color::Black : Color::White;
 }
 void Board::clear() {

@@ -292,6 +292,30 @@ int main() {
     assert(!board.isInCheck(Color::White));
     assert(board.sideToMove == Color::Black);
   }
+// White pawn promotes on the eighth rank.
+{
+    Board board;
+    board.clear();
+    board.putPiece(Piece::WhitePawn, 48); // a7
+    board.movePiece(48, 56);              // a7 to a8
+
+    assert(board.pieceAt(48) == Piece::None);
+    assert(board.pieceAt(56) == Piece::WhiteQueen);
+    assert(board.sideToMove == Color::Black);
+}
+
+// Black pawn promotes on the first rank.
+{
+    Board board;
+    board.clear();
+    board.sideToMove = Color::Black;
+    board.putPiece(Piece::BlackPawn, 8); // a2
+    board.movePiece(8, 0);               // a2 to a1
+
+    assert(board.pieceAt(8) == Piece::None);
+    assert(board.pieceAt(0) == Piece::BlackQueen);
+    assert(board.sideToMove == Color::White);
+}
 
   std::cout << "All move, attack, and king-safety checks passed.\n";
 }
