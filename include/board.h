@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <vector>
 #include <iosfwd>
+#include <string>
 
 enum class Color : std::uint8_t { White = 0, Black = 1 };
 
@@ -64,6 +65,7 @@ struct Board {
   std::vector<Move> generateLegalMoves() const;
   std::uint64_t perft(int depth);
   void perftDivide(int depth) const;
+  bool loadFEN(const std::string &fen);
 
   // Castling Rights 
   std::uint8_t castlingRights = 0;

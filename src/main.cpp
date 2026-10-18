@@ -528,5 +528,16 @@ int main() {
     board.perftDivide(3);
   }
 
+  // Kiwipete exercises castling and more complex move-generation cases.
+  {
+    Board board;
+    const bool loaded = board.loadFEN(
+        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/"
+        "PPPBBPPP/R3K2R w KQkq - 0 1");
+    assert(loaded);
+    assert(board.generateLegalMoves().size() == 48);
+    assert(board.perft(2) == 2039);
+  }
+
   std::cout << "All move, attack, king-safety, castling, and move-generation checks passed.\n";
 }
