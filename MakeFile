@@ -4,13 +4,21 @@ CPPFLAGS := -Iinclude
 
 SOURCES := src/main.cpp src/board.cpp
 TARGET := cerebrum
+TEST_SOURCES := tests/test_board.cpp src/board.cpp
+TEST_TARGET := test_board
 
-.PHONY: all clean
+.PHONY: all test clean
 
 all: $(TARGET)
 
 $(TARGET): $(SOURCES) include/board.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(SOURCES) -o $(TARGET)
 
+$(TEST_TARGET): $(TEST_SOURCES) include/board.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(TEST_SOURCES) -o $(TEST_TARGET)
+
+test: $(TEST_TARGET)
+	./$(TEST_TARGET)
+
 clean:
-	rm -f $(TARGET)
+	rm -f $(TARGET) $(TEST_TARGET)
