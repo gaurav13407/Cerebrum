@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <cstdint>
+#include <vector>
 
 enum class Color : std::uint8_t { White = 0, Black = 1 };
 
@@ -29,6 +30,12 @@ enum CastlingRight : std::uint8_t{
     BlackQueenSide=1 <<3,
 };
 
+struct Move {
+  int from = -1;
+  int to = -1;
+  Piece promotion = Piece::None;
+};
+
 struct Board {
   // One bitboard per peice type and color
   std::array<std::uint64_t, 12> pieces{};
@@ -53,6 +60,8 @@ struct Board {
   bool isSquareAttacked(int square, Color byColor) const;
   bool isInCheck(Color color) const;
   bool isLegalMove(int from,int to, Piece promotion=Piece::None) const;
+  std::vector<Move> generateLegalMoves() const;
+  std::uint64_t perft(int depth);
 
   // Castling Rights 
   std::uint8_t castlingRights = 0;

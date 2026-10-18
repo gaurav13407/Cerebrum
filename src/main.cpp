@@ -494,5 +494,31 @@ int main() {
     assert((board.castlingRights & WhiteKingSide) == 0);
   }
 
-  std::cout << "All move, attack, king-safety, and castling checks passed.\n";
+  // Legal move generation matches the standard starting-position perft counts.
+  {
+    Board board;
+    board.setStartingPosition();
+    assert(board.generateLegalMoves().size() == 20);
+    assert(board.perft(1) == 20);
+    assert(board.perft(2) == 400);
+    assert(board.perft(3) == 8902);
+  }
+
+  // A promotion move is represented as four distinct legal choices.
+  {
+    Board board;
+    board.clear();
+    board.putPiece(Piece::WhiteKing, 4);
+    board.putPiece(Piece::BlackKing, 60);
+    board.putPiece(Piece::WhitePawn, 48); // a7
+    int promotionMoves = 0;
+    for (const Move& move : board.generateLegalMoves()) {
+      if (move.from == 48 && move.to == 56) {
+        ++promotionMoves;
+      }
+    }
+    assert(promotionMoves == 4);
+  }
+
+  std::cout << "All move, attack, king-safety, castling, and move-generation checks passed.\n";
 }

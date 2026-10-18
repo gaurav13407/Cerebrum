@@ -171,6 +171,55 @@ bool Board::isLegalMove(int from, int to, Piece promotion) const {
     return !next.isInCheck(colorOf(movingPiece));
 }
 
+std::vector<Move> Board::generateLegalMoves() const {
+    std::vector<Move> moves;
+    constexpr Piece promotions[] = {
+        Piece::WhiteQueen, Piece::WhiteRook, Piece::WhiteBishop, Piece::WhiteKnight,
+        Piece::BlackQueen, Piece::BlackRook, Piece::BlackBishop, Piece::BlackKnight};
+
+    for (int from = 0; from < 64; ++from) {
+        const Piece movingPiece = pieceAt(from);
+        if (movingPiece == Piece::None || colorOf(movingPiece) != sideToMove) {
+            continue;
+        }
+        for (int to = 0; to < 64; ++to) {
+            const bool promotes =
+                (movingPiece == Piece::WhitePawn && to / 8 == 7) ||
+                (movingPiece == Piece::BlackPawn && to / 8 == 0);
+            if (promotes) {
+                for (Piece promotion : promotions) {
+                    if (isLegalMove(from, to, promotion)) {
+                        moves.push_back({from, to, promotion});
+                    }
+                }
+            } else if (isLegalMove(from, to)) {
+                moves.push_back({from, to, Piece::None});
+            }
+        }
+    }
+    return moves;
+}
+
+std::uint64_t Board::perft(int depth) {
+    if (depth < 0) {
+        return 0;
+    }
+    if (depth == 0) {
+        return 1;
+    }
+    const std::vector<Move> moves = generateLegalMoves();
+    if (depth == 1) {
+        return moves.size();
+    }
+    std::uint64_t nodes = 0;
+    for (const Move& move : moves) {
+        Board child = *this;
+        child.movePiece(move.from, move.to, move.promotion);
+        nodes += child.perft(depth - 1);
+    }
+    return nodes;
+}
+
 bool Board::isSquareAttacked(int square, Color byColor) const {
     if (square < 0 || square >= 64) {
         return false;
