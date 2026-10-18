@@ -539,5 +539,55 @@ int main() {
     assert(board.perft(2) == 2039);
   }
 
+  // Standard en passant perft position.
+  {
+    Board board;
+    const bool loaded = board.loadFEN(
+        "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1");
+    assert(loaded);
+    assert(board.perft(1) == 14);
+    assert(board.perft(2) == 191);
+    std::cout << "En passant perft checks passed (depth 1: 14, depth 2: 191).\n";
+  }
+
+  // Standard perft position 4 exercises promotions and check evasions.
+  {
+    Board board;
+    const bool loaded = board.loadFEN(
+        "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/"
+        "Pp1P2PP/R2Q1RK1 w kq - 0 1");
+    assert(loaded);
+    assert(board.perft(1) == 6);
+    assert(board.perft(2) == 264);
+    assert(board.perft(3) == 9467);
+    std::cout << "Perft position 4 checks passed (depths 1-3: 6, 264, 9467).\n";
+  }
+
+  // Standard perft position 5 exercises promotions, checks, and captures.
+  {
+    Board board;
+    const bool loaded = board.loadFEN(
+        "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/"
+        "RNBQK2R w KQ - 1 8");
+    assert(loaded);
+    assert(board.perft(1) == 44);
+    assert(board.perft(2) == 1486);
+    assert(board.perft(3) == 62379);
+    std::cout << "Perft position 5 checks passed (depths 1-3: 44, 1486, 62379).\n";
+  }
+
+  // Standard perft position 6 exercises complex piece interactions and king safety.
+  {
+    Board board;
+    const bool loaded = board.loadFEN(
+        "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/"
+        "P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10");
+    assert(loaded);
+    assert(board.perft(1) == 46);
+    assert(board.perft(2) == 2079);
+    assert(board.perft(3) == 89890);
+    std::cout << "Perft position 6 checks passed (depths 1-3: 46, 2079, 89890).\n";
+  }
+
   std::cout << "All move, attack, king-safety, castling, and move-generation checks passed.\n";
 }
