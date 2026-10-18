@@ -520,5 +520,13 @@ int main() {
     assert(promotionMoves == 4);
   }
 
+  // Print per-move counts; at depth 3 the total should be 8,902.
+  {
+    Board board;
+    board.setStartingPosition();
+    std::cout << "Starting-position perft divide (depth 3):\n";
+    board.perftDivide(3);
+  }
+
   std::cout << "All move, attack, king-safety, castling, and move-generation checks passed.\n";
 }

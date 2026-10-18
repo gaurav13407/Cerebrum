@@ -5,6 +5,8 @@
 #include <filesystem>
 #include <iostream>
 #include <bit>
+#include <string>
+#include <iosfwd>
 
 namespace {
 constexpr std::uint64_t bit(int square) { return std::uint64_t{1} << square; }
@@ -218,6 +220,54 @@ std::uint64_t Board::perft(int depth) {
         nodes += child.perft(depth - 1);
     }
     return nodes;
+}
+
+// Node count for each legal move from a position
+void Board::perftDivide(int depth) const{
+    if(depth <1){
+        return;
+    }
+    const std::vector<Move> moves=generateLegalMoves();
+    std::uint64_t totalNodes=0;
+
+    for(const Move &move:moves){
+        Board child=*this;
+        child.movePiece(move.from, move.to, move.promotion);
+
+        const std::uint64_t nodes=child.perft(depth-1);
+        totalNodes+=nodes;
+
+        const auto squareName=[](int square){
+            std::string name;
+            name += static_cast<char>('a' + square % 8);
+            name += static_cast<char>('1' + square / 8);
+            return name;
+        };
+        std::cout << squareName(move.from) << squareName(move.to);
+
+        switch(move.promotion){
+            case Piece::WhiteQueen:
+            case Piece::BlackQueen:
+                std::cout << 'q';
+                break;
+            case Piece::WhiteRook:
+            case Piece::BlackRook:
+                std::cout << 'r';
+                break;
+            case Piece::WhiteBishop:
+            case Piece::BlackBishop:
+                std::cout << 'b';
+                break;
+            case Piece::WhiteKnight:
+            case Piece::BlackKnight:
+                std::cout << 'n';
+                break;
+            default:
+                break;
+        }
+        std::cout << ": " << nodes << '\n';
+    }
+    std::cout << "Total: " << totalNodes << '\n';
 }
 
 bool Board::isSquareAttacked(int square, Color byColor) const {
