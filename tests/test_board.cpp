@@ -649,5 +649,28 @@ int main() {
     std::cout << "Make/unmake round-trip checks passed for normal, castling, en passant, and promotion moves.\n";
   }
 
+  // A normal capture must restore the captured piece when the move is undone.
+  {
+    Board board;
+    assert(board.loadFEN("n6k/8/8/8/8/8/8/R6K w - - 0 1"));
+    const Board original = board;
+    UndoInfo undo;
+
+    assert(board.makeMove(Move{0, 56, Piece::None}, undo)); // Ra1xa8
+    assert(board.pieceAt(56) == Piece::WhiteRook);
+    assert(board.pieceAt(0) == Piece::None);
+
+    board.unmakeMove(undo);
+    assert(board.pieceAt(0) == Piece::WhiteRook);
+    assert(board.pieceAt(56) == Piece::BlackKnight);
+    assert(board.pieces == original.pieces);
+    assert(board.occupancy == original.occupancy);
+    assert(board.sideToMove == original.sideToMove);
+    assert(board.castlingRights == original.castlingRights);
+    assert(board.enPassantSquare == original.enPassantSquare);
+
+    std::cout << "Normal-capture make/unmake check passed.\n";
+  }
+
   std::cout << "All move, attack, king-safety, castling, and move-generation checks passed.\n";
 }
