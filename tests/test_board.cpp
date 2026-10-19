@@ -615,5 +615,39 @@ int main() {
     std::cout << "Invalid FEN checks passed.\n";
   }
 
+  // Making and unmaking a move must restore every stored board field.
+  {
+    const auto checkRoundTrip = [](Board board, const Move& move) {
+      const Board original = board;
+      UndoInfo undo;
+      assert(board.makeMove(move, undo));
+      board.unmakeMove(undo);
+
+      assert(board.pieces == original.pieces);
+      assert(board.occupancy == original.occupancy);
+      assert(board.sideToMove == original.sideToMove);
+      assert(board.castlingRights == original.castlingRights);
+      assert(board.enPassantSquare == original.enPassantSquare);
+    };
+
+    Board normalMove;
+    normalMove.setStartingPosition();
+    checkRoundTrip(normalMove, Move{12, 28, Piece::None}); // e2-e4
+
+    Board castling;
+    assert(castling.loadFEN("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1"));
+    checkRoundTrip(castling, Move{4, 6, Piece::None}); // White castles kingside
+
+    Board enPassant;
+    assert(enPassant.loadFEN("4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1"));
+    checkRoundTrip(enPassant, Move{36, 43, Piece::None}); // e5xd6 en passant
+
+    Board promotion;
+    assert(promotion.loadFEN("4k3/P7/8/8/8/8/8/4K3 w - - 0 1"));
+    checkRoundTrip(promotion, Move{48, 56, Piece::WhiteQueen}); // a7-a8=Q
+
+    std::cout << "Make/unmake round-trip checks passed for normal, castling, en passant, and promotion moves.\n";
+  }
+
   std::cout << "All move, attack, king-safety, castling, and move-generation checks passed.\n";
 }

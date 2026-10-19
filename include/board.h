@@ -38,6 +38,17 @@ struct Move {
   Piece promotion = Piece::None;
 };
 
+struct UndoInfo {
+  Move move;
+  Piece movedPiece = Piece::None;
+  Piece capturedPiece = Piece::None;
+  int capturedSquare = -1;
+  std::uint8_t previousCastlingRights = 0;
+  int previousEnPassantSquare = -1;
+  Color previousSideToMove = Color::White;
+};
+
+
 struct Board {
   // One bitboard per peice type and color
   std::array<std::uint64_t, 12> pieces{};
@@ -66,6 +77,8 @@ struct Board {
   std::uint64_t perft(int depth);
   void perftDivide(int depth) const;
   bool loadFEN(const std::string &fen);
+  bool makeMove(const Move& move, UndoInfo& undo);
+  void unmakeMove(const UndoInfo& undo);
 
   // Castling Rights 
   std::uint8_t castlingRights = 0;

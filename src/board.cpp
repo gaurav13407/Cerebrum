@@ -571,8 +571,15 @@ bool Board::isPseudoLegalMove(int from, int to) const {
 }
 
 void Board::movePiece(int from, int to, Piece promotion) {
-  if (!isLegalMove(from, to, promotion)) {
-    return;
+  UndoInfo undo;
+  makeMove(Move{from, to, promotion}, undo);
+}
+
+bool Board::makeMove(const Move& move, UndoInfo& undo) {
+  const int from = move.from;
+  const int to = move.to;
+  if (!isLegalMove(from, to, move.promotion)) {
+    return false;
   }
 
   const Piece movingPiece = pieceAt(from);
@@ -581,14 +588,33 @@ void Board::movePiece(int from, int to, Piece promotion) {
       (movingPiece == Piece::WhiteKing || movingPiece == Piece::BlackKing) &&
       std::abs(to - from) == 2;
 
-  // Moving a king permanently removes both castling rights for that side.
-  if (movingPiece == Piece::WhiteKing) {
-    castlingRights &= static_cast<std::uint8_t>(~(WhiteKingSide | WhiteQueenSide));
-  } else if (movingPiece == Piece::BlackKing) {
-    castlingRights &= static_cast<std::uint8_t>(~(BlackKingSide | BlackQueenSide));
+  undo.move = move;
+  undo.movedPiece = movingPiece;
+  undo.capturedPiece = targetPiece;
+  undo.capturedSquare = to;
+  undo.previousCastlingRights = castlingRights;
+  undo.previousEnPassantSquare = enPassantSquare;
+  undo.previousSideToMove = sideToMove;
+
+  const int fileDifference = (to % 8) - (from % 8);
+  const bool enPassantCapture =
+      (movingPiece == Piece::WhitePawn || movingPiece == Piece::BlackPawn) &&
+      targetPiece == Piece::None && to == enPassantSquare &&
+      (fileDifference == -1 || fileDifference == 1);
+  if (enPassantCapture) {
+    const int direction = (movingPiece == Piece::WhitePawn) ? 8 : -8;
+    undo.capturedSquare = to - direction;
+    undo.capturedPiece = pieceAt(undo.capturedSquare);
   }
 
-  // Moving a rook from its original square removes that side's right.
+  if (movingPiece == Piece::WhiteKing) {
+    castlingRights &=
+        static_cast<std::uint8_t>(~(WhiteKingSide | WhiteQueenSide));
+  } else if (movingPiece == Piece::BlackKing) {
+    castlingRights &=
+        static_cast<std::uint8_t>(~(BlackKingSide | BlackQueenSide));
+  }
+
   if (movingPiece == Piece::WhiteRook && from == 0) {
     castlingRights &= static_cast<std::uint8_t>(~WhiteQueenSide);
   } else if (movingPiece == Piece::WhiteRook && from == 7) {
@@ -599,7 +625,6 @@ void Board::movePiece(int from, int to, Piece promotion) {
     castlingRights &= static_cast<std::uint8_t>(~BlackKingSide);
   }
 
-  // Capturing a rook on its original square also removes its castling right.
   if (targetPiece == Piece::WhiteRook && to == 0) {
     castlingRights &= static_cast<std::uint8_t>(~WhiteQueenSide);
   } else if (targetPiece == Piece::WhiteRook && to == 7) {
@@ -610,30 +635,19 @@ void Board::movePiece(int from, int to, Piece promotion) {
     castlingRights &= static_cast<std::uint8_t>(~BlackKingSide);
   }
 
-  const int fileDifference = (to % 8) - (from % 8);
-  const bool enPassantCapture =
-      (movingPiece == Piece::WhitePawn || movingPiece == Piece::BlackPawn) &&
-      targetPiece == Piece::None && to == enPassantSquare &&
-      (fileDifference == -1 || fileDifference == 1);
-
   if (targetPiece != Piece::None) {
     removePiece(targetPiece, to);
   }
-
   if (enPassantCapture) {
-    const int direction =
-        (colorOf(movingPiece) == Color::White) ? 8 : -8;
-    removePiece(pieceAt(to - direction), to - direction);
+    removePiece(undo.capturedPiece, undo.capturedSquare);
   }
 
   removePiece(movingPiece, from);
-
   const bool promotes =
       (movingPiece == Piece::WhitePawn && to / 8 == 7) ||
       (movingPiece == Piece::BlackPawn && to / 8 == 0);
-  putPiece(promotes ? promotion : movingPiece, to);
+  putPiece(promotes ? move.promotion : movingPiece, to);
 
-  // Castling also moves the rook beside the king.
   if (isCastling) {
     const int rookFrom = (to > from) ? from + 3 : from - 4;
     const int rookTo = (to > from) ? from + 1 : from - 1;
@@ -642,15 +656,42 @@ void Board::movePiece(int from, int to, Piece promotion) {
     putPiece(rook, rookTo);
   }
 
-  // A two-square pawn move creates an en passant target for one turn.
   enPassantSquare = -1;
   if ((movingPiece == Piece::WhitePawn || movingPiece == Piece::BlackPawn) &&
       std::abs(to - from) == 16) {
     enPassantSquare = (from + to) / 2;
   }
-
   sideToMove = (sideToMove == Color::White) ? Color::Black : Color::White;
+  return true;
 }
+
+void Board::unmakeMove(const UndoInfo& undo) {
+  const int from = undo.move.from;
+  const int to = undo.move.to;
+  const bool wasCastling =
+      (undo.movedPiece == Piece::WhiteKing ||
+       undo.movedPiece == Piece::BlackKing) &&
+      std::abs(to - from) == 2;
+
+  if (wasCastling) {
+    const int rookFrom = (to > from) ? from + 3 : from - 4;
+    const int rookTo = (to > from) ? from + 1 : from - 1;
+    const Piece rook = pieceAt(rookTo);
+    removePiece(rook, rookTo);
+    putPiece(rook, rookFrom);
+  }
+
+  removePiece(pieceAt(to), to);
+  putPiece(undo.movedPiece, from);
+  if (undo.capturedPiece != Piece::None) {
+    putPiece(undo.capturedPiece, undo.capturedSquare);
+  }
+
+  castlingRights = undo.previousCastlingRights;
+  enPassantSquare = undo.previousEnPassantSquare;
+  sideToMove = undo.previousSideToMove;
+}
+
 void Board::clear() {
   pieces.fill(0);
   occupancy.fill(0);
