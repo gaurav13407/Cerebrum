@@ -1,5 +1,6 @@
 #include "board.h"
 #include "eval.h"
+#include "search.h"
 
 #include <cassert>
 #include <iostream>
@@ -686,6 +687,47 @@ int main() {
     assert(evaluateMaterial(board) == -900);
 
     std::cout << "Material evaluation checks passed.\n";
+  }
+
+  // Search returns a legal move and leaves the board unchanged.
+  {
+    Board board;
+    board.setStartingPosition();
+    const Board original = board;
+
+    const SearchResult result = findBestMove(board, 1);
+
+    assert(result.hasMove);
+    assert(result.score == 0);
+    assert(result.nodes > 0);
+    assert(board.isLegalMove(result.bestMove.from,
+                             result.bestMove.to,
+                             result.bestMove.promotion));
+    assert(board.pieces == original.pieces);
+    assert(board.occupancy == original.occupancy);
+    assert(board.sideToMove == original.sideToMove);
+    assert(board.castlingRights == original.castlingRights);
+    assert(board.enPassantSquare == original.enPassantSquare);
+    std::cout << "Basic search check passed.\n";
+  }
+
+  // Checkmate has no move and a large negative score for the side to move.
+  {
+    Board board;
+    assert(board.loadFEN("7k/6Q1/5K2/8/8/8/8/8 b - - 0 1"));
+    const SearchResult result = findBestMove(board, 2);
+    assert(!result.hasMove);
+    assert(result.score < -29000);
+  }
+
+  // Stalemate has no move and a zero score.
+  {
+    Board board;
+    assert(board.loadFEN("7k/5Q2/5K2/8/8/8/8/8 b - - 0 1"));
+    const SearchResult result = findBestMove(board, 2);
+    assert(!result.hasMove);
+    assert(result.score == 0);
+    std::cout << "Checkmate and stalemate search checks passed.\n";
   }
 
   std::cout << "All move, attack, king-safety, castling, and move-generation checks passed.\n";

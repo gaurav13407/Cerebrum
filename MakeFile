@@ -2,19 +2,19 @@ CXX := g++
 CXXFLAGS := -std=c++20 -O3 -Wall -Wextra -Wpedantic
 CPPFLAGS := -Iinclude
 
-SOURCES := src/main.cpp src/board.cpp src/movegen.cpp src/fen.cpp src/eval.cpp
+SOURCES := src/main.cpp src/board.cpp src/movegen.cpp src/fen.cpp src/eval.cpp src/search.cpp
 TARGET := cerebrum
-TEST_SOURCES := tests/test_board.cpp src/board.cpp src/movegen.cpp src/fen.cpp src/eval.cpp
+TEST_SOURCES := tests/test_board.cpp src/board.cpp src/movegen.cpp src/fen.cpp src/eval.cpp src/search.cpp
 TEST_TARGET := test_board
 
 .PHONY: all test clean
 
 all: $(TARGET)
 
-$(TARGET): $(SOURCES) include/board.h include/eval.h
+$(TARGET): $(SOURCES) include/board.h include/eval.h include/search.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(SOURCES) -o $(TARGET)
 
-$(TEST_TARGET): $(TEST_SOURCES) include/board.h include/eval.h
+$(TEST_TARGET): $(TEST_SOURCES) include/board.h include/eval.h include/search.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(TEST_SOURCES) -o $(TEST_TARGET)
 
 test: $(TEST_TARGET)
