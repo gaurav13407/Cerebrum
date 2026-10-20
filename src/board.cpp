@@ -215,9 +215,14 @@ std::uint64_t Board::perft(int depth) {
     }
     std::uint64_t nodes = 0;
     for (const Move& move : moves) {
-        Board child = *this;
-        child.movePiece(move.from, move.to, move.promotion);
-        nodes += child.perft(depth - 1);
+        UndoInfo undo;
+
+        if(!makeMove(move,undo)){
+            continue;
+        }
+        nodes+=perft(depth-1);
+        unmakeMove(undo);
+        
     }
     return nodes;
 }
