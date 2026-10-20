@@ -1,4 +1,5 @@
 #include "board.h"
+#include "eval.h"
 
 #include <cassert>
 #include <iostream>
@@ -670,6 +671,21 @@ int main() {
     assert(board.enPassantSquare == original.enPassantSquare);
 
     std::cout << "Normal-capture make/unmake check passed.\n";
+  }
+
+  // Material evaluation is zero when equal and changes with side to move.
+  {
+    Board board;
+    assert(board.loadFEN("4k3/8/8/8/8/8/8/4K3 w - - 0 1"));
+    assert(evaluateMaterial(board) == 0);
+
+    assert(board.loadFEN("4k3/8/8/8/8/8/8/3QK3 w - - 0 1"));
+    assert(evaluateMaterial(board) == 900);
+
+    assert(board.loadFEN("4k3/8/8/8/8/8/8/3QK3 b - - 0 1"));
+    assert(evaluateMaterial(board) == -900);
+
+    std::cout << "Material evaluation checks passed.\n";
   }
 
   std::cout << "All move, attack, king-safety, castling, and move-generation checks passed.\n";
