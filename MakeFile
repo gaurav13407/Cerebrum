@@ -2,9 +2,9 @@ CXX := g++
 CXXFLAGS := -std=c++20 -O3 -Wall -Wextra -Wpedantic
 CPPFLAGS := -Iinclude
 
-SOURCES := src/main.cpp src/board.cpp
+SOURCES := src/main.cpp src/board.cpp src/movegen.cpp src/fen.cpp
 TARGET := cerebrum
-TEST_SOURCES := tests/test_board.cpp src/board.cpp
+TEST_SOURCES := tests/test_board.cpp src/board.cpp src/movegen.cpp src/fen.cpp
 TEST_TARGET := test_board
 
 .PHONY: all test clean
