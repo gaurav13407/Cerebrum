@@ -166,37 +166,72 @@ SearchResult findBestMove(Board& board, int depth) {
     depth = 1;
   }
 
-  std::vector<Move> moves = board.generateLegalMoves();
-  if (moves.empty()) {
+  const std::vector<Move> rootMoves = board.generateLegalMoves();
+  if (rootMoves.empty()) {
     result.score = board.isInCheck(board.sideToMove) ? -MateScore : 0;
     return result;
   }
-  orderMoves(board, moves);
 
-  int alpha = -Infinity;
-  constexpr int beta = Infinity;
-  int bestScore = -Infinity;
+  Move previousBestMove;
+  bool hasPreviousBestMove = false;
 
-  for (const Move& move : moves) {
-    UndoInfo undo;
-    if (!board.makeMove(move, undo)) {
-      continue;
+  for (int currentDepth = 1; currentDepth <= depth; ++currentDepth) {
+    std::vector<Move> moves = rootMoves;
+    orderMoves(board, moves);
+
+    if (hasPreviousBestMove) {
+      const auto previousMove = std::find_if(
+          moves.begin(), moves.end(),
+          [&previousBestMove](const Move& move) {
+            return move.from == previousBestMove.from &&
+                   move.to == previousBestMove.to &&
+                   move.promotion == previousBestMove.promotion;
+          });
+      if (previousMove != moves.end()) {
+        std::rotate(moves.begin(), previousMove, previousMove + 1);
+      }
     }
 
-    const int score =
-        -negamax(board, depth - 1, -beta, -alpha, 1, result.nodes);
-    board.unmakeMove(undo);
+    int alpha = -Infinity;
+    constexpr int beta = Infinity;
+    int bestScore = -Infinity;
+    Move iterationBestMove;
+    bool foundMove = false;
 
-    if (!result.hasMove || score > bestScore) {
-      bestScore = score;
-      result.bestMove = move;
-      result.hasMove = true;
+    for (const Move& move : moves) {
+      UndoInfo undo;
+      if (!board.makeMove(move, undo)) {
+        continue;
+      }
+
+      const int score =
+          -negamax(board, currentDepth - 1, -beta, -alpha, 1, result.nodes);
+      board.unmakeMove(undo);
+
+      if (!foundMove || score > bestScore) {
+        bestScore = score;
+        iterationBestMove = move;
+        foundMove = true;
+      }
+      if (score > alpha) {
+        alpha = score;
+      }
     }
-    if (score > alpha) {
-      alpha = score;
+
+    if (!foundMove) {
+      break;
     }
+
+    result.bestMove = iterationBestMove;
+    result.score = bestScore;
+    result.hasMove = true;
+    result.completedDepth = currentDepth;
+    previousBestMove = iterationBestMove;
+    hasPreviousBestMove = true;
   }
 
-  result.score = result.hasMove ? bestScore : evaluateMaterial(board);
+  if (!result.hasMove) {
+    result.score = evaluateMaterial(board);
+  }
   return result;
 }

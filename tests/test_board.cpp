@@ -695,9 +695,10 @@ int main() {
     board.setStartingPosition();
     const Board original = board;
 
-    const SearchResult result = findBestMove(board, 1);
+    const SearchResult result = findBestMove(board, 3);
 
     assert(result.hasMove);
+    assert(result.completedDepth == 3);
     assert(result.score == 0);
     assert(result.nodes > 0);
     assert(board.isLegalMove(result.bestMove.from,
