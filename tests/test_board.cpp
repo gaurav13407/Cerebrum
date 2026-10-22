@@ -702,6 +702,7 @@ int main() {
     assert(result.completedDepth == 3);
     assert(result.score == 0);
     assert(result.nodes > 0);
+    assert(result.transpositionHits > 0);
     assert(board.isLegalMove(result.bestMove.from,
                              result.bestMove.to,
                              result.bestMove.promotion));
@@ -710,7 +711,8 @@ int main() {
     assert(board.sideToMove == original.sideToMove);
     assert(board.castlingRights == original.castlingRights);
     assert(board.enPassantSquare == original.enPassantSquare);
-    std::cout << "Basic search check passed.\n";
+    std::cout << "Basic search check passed (transposition-table hits: "
+              << result.transpositionHits << ").\n";
   }
 
   // Zobrist hashes identify the full position and the table stores search data by hash.

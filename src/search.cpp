@@ -1,5 +1,6 @@
 #include "search.h"
 #include "eval.h"
+#include "tt.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -122,8 +123,30 @@ int quiescence(Board &board, int alpha,int beta, int ply, std::uint64_t& nodes){
     return bestScore;
 }
 int negamax(Board& board, int depth, int alpha, int beta,
-            int ply, std::uint64_t& nodes) {
+            int ply, std::uint64_t& nodes, std::uint64_t& transpositionHits,
+            TranspositionTable& table) {
   ++nodes;
+
+  const int originalAlpha = alpha;
+  const int originalBeta = beta;
+  const std::uint64_t key = zobristHash(board);
+  TTEntry cached;
+  Move tableMove;
+  bool hasTableMove = false;
+
+  if (table.probe(key, cached)) {
+    ++transpositionHits;
+    tableMove = cached.bestMove;
+    hasTableMove = true;
+
+    if (cached.depth >= depth) {
+      if (cached.bound == TTBound::Exact ||
+          (cached.bound == TTBound::LowerBound && cached.score >= beta) ||
+          (cached.bound == TTBound::UpperBound && cached.score <= alpha)) {
+        return cached.score;
+      }
+    }
+  }
 
   std::vector<Move> moves = board.generateLegalMoves();
   if (moves.empty()) {
@@ -133,8 +156,18 @@ int negamax(Board& board, int depth, int alpha, int beta,
       return quiescence(board, alpha, beta, ply, nodes);
   }
   orderMoves(board, moves);
+  if (hasTableMove) {
+    const auto cachedMove = std::find_if(
+        moves.begin(), moves.end(), [&tableMove](const Move& move) {
+          return move.from == tableMove.from && move.to == tableMove.to &&
+                 move.promotion == tableMove.promotion;
+        });
+    if (cachedMove != moves.end())
+      std::rotate(moves.begin(), cachedMove, cachedMove + 1);
+  }
 
   int bestScore = -Infinity;
+  Move bestMove;
   for (const Move& move : moves) {
     UndoInfo undo;
     if (!board.makeMove(move, undo)) {
@@ -142,11 +175,13 @@ int negamax(Board& board, int depth, int alpha, int beta,
     }
 
     const int score =
-        -negamax(board, depth - 1, -beta, -alpha, ply + 1, nodes);
+        -negamax(board, depth - 1, -beta, -alpha, ply + 1, nodes,
+                 transpositionHits, table);
     board.unmakeMove(undo);
 
     if (score > bestScore) {
       bestScore = score;
+      bestMove = move;
     }
     if (score > alpha) {
       alpha = score;
@@ -156,11 +191,21 @@ int negamax(Board& board, int depth, int alpha, int beta,
     }
   }
 
+  TTEntry entry;
+  entry.depth = depth;
+  entry.score = bestScore;
+  entry.bestMove = bestMove;
+  entry.bound = bestScore <= originalAlpha ? TTBound::UpperBound
+                : bestScore >= originalBeta ? TTBound::LowerBound
+                                            : TTBound::Exact;
+  table.store(key, entry);
+
   return bestScore;
 }
 } // namespace
 
 SearchResult findBestMove(Board& board, int depth) {
+  static TranspositionTable table;
   SearchResult result;
   if (depth < 1) {
     depth = 1;
@@ -205,7 +250,8 @@ SearchResult findBestMove(Board& board, int depth) {
       }
 
       const int score =
-          -negamax(board, currentDepth - 1, -beta, -alpha, 1, result.nodes);
+          -negamax(board, currentDepth - 1, -beta, -alpha, 1, result.nodes,
+                   result.transpositionHits, table);
       board.unmakeMove(undo);
 
       if (!foundMove || score > bestScore) {

@@ -6,6 +6,7 @@ struct SearchResult{
     Move bestMove;
     int score=0;
     std::uint64_t nodes=0;
+    std::uint64_t transpositionHits=0;
     bool hasMove=false;
     int completedDepth=0;
 };
