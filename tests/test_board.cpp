@@ -1,6 +1,7 @@
 #include "board.h"
 #include "eval.h"
 #include "search.h"
+#include "tt.h"
 
 #include <cassert>
 #include <iostream>
@@ -710,6 +711,38 @@ int main() {
     assert(board.castlingRights == original.castlingRights);
     assert(board.enPassantSquare == original.enPassantSquare);
     std::cout << "Basic search check passed.\n";
+  }
+
+  // Zobrist hashes identify the full position and the table stores search data by hash.
+  {
+    Board board;
+    board.setStartingPosition();
+    const std::uint64_t startingHash = zobristHash(board);
+
+    UndoInfo undo;
+    assert(board.makeMove(Move{12, 28, Piece::None}, undo)); // e2-e4
+    assert(zobristHash(board) != startingHash);
+    board.unmakeMove(undo);
+    assert(zobristHash(board) == startingHash);
+
+    TranspositionTable table(1024);
+    TTEntry stored;
+    stored.depth = 4;
+    stored.score = 25;
+    stored.bound = TTBound::Exact;
+    stored.bestMove = Move{12, 28, Piece::None};
+    table.store(startingHash, stored);
+
+    TTEntry found;
+    assert(table.probe(startingHash, found));
+    assert(found.depth == 4);
+    assert(found.score == 25);
+    assert(found.bound == TTBound::Exact);
+    assert(found.bestMove.from == 12 && found.bestMove.to == 28);
+
+    table.clear();
+    assert(!table.probe(startingHash, found));
+    std::cout << "Zobrist hashing and transposition-table checks passed.\n";
   }
 
   // Checkmate has no move and a large negative score for the side to move.
