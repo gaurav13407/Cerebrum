@@ -1,6 +1,8 @@
 #include "search.h"
 #include "eval.h"
 #include <algorithm>
+#include <cmath>
+#include <cstdint>
 #include <vector>
 
 namespace {
@@ -20,6 +22,20 @@ int pieceValue(Piece piece){
         case 5:return 0; //King
         default: return 0;
     }
+}
+
+bool isCaptureMove(const Board &board, const  Move& move){
+    if(board.pieceAt(move.to)!=Piece::None){
+        return true;
+    }
+    const Piece movingPiece=board.pieceAt(move.from);
+    const bool isPawn=
+        movingPiece==Piece::WhitePawn||
+        movingPiece==Piece::BlackPawn;
+
+    return isPawn && 
+        move.to==board.enPassantSquare &&
+        move.from %8 !=move.to %8;
 }
 
 int moveOrderScore(const Board& board,const Move& move){
@@ -52,6 +68,59 @@ void orderMoves(const Board& board,std::vector<Move>&moves){
             });
 }
 
+int quiescence(Board &board, int alpha,int beta, int ply, std::uint64_t& nodes){
+    ++nodes;
+    const bool inCheck=board.isInCheck(board.sideToMove);
+    std::vector<Move> moves = board.generateLegalMoves();
+
+    if (moves.empty()) {
+        return inCheck ? -MateScore + ply : 0;
+    }
+    int bestScore=-Infinity;
+
+    if(!inCheck){
+        const int standPat=evaluateMaterial(board);
+
+        if(standPat>=beta){
+            return standPat;
+        }
+        if(standPat>alpha){
+            alpha=standPat;
+        }
+        bestScore=standPat;
+        moves.erase(
+                std::remove_if(moves.begin(), moves.end(),
+                    [&board](const Move &move){
+                    return !isCaptureMove(board,move) &&
+                    move.promotion==Piece::None;
+                    }
+                ),
+                moves.end());
+    }
+    orderMoves(board,moves);
+
+    for(const Move &move :moves){
+        UndoInfo undo;
+        if(!board.makeMove(move,undo)){
+            continue;
+        }
+        const int score=
+            -quiescence(board, -beta, -alpha, ply + 1, nodes);
+
+        board.unmakeMove(undo);
+
+        if(score>bestScore){
+            bestScore=score;
+        }
+        if(score>alpha){
+            alpha=score;
+        }
+        if(alpha>=beta){
+            break;
+        }
+    }
+    return bestScore;
+}
 int negamax(Board& board, int depth, int alpha, int beta,
             int ply, std::uint64_t& nodes) {
   ++nodes;
@@ -61,7 +130,7 @@ int negamax(Board& board, int depth, int alpha, int beta,
     return board.isInCheck(board.sideToMove) ? -MateScore + ply : 0;
   }
   if (depth == 0) {
-    return evaluateMaterial(board);
+      return quiescence(board, alpha, beta, ply, nodes);
   }
   orderMoves(board, moves);
 
