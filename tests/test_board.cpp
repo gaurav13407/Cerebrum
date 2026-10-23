@@ -5,6 +5,7 @@
 
 #include <cassert>
 #include <iostream>
+#include <vector>
 
 int main() {
   // One-square pawn move: a2 to a3.
@@ -780,6 +781,19 @@ int main() {
     assert(board.sideToMove == original.sideToMove);
     std::cout << "Timed search check passed (completed depth: "
               << result.completedDepth << ").\n";
+  }
+
+  // A position is repeated after it has already occurred twice in the current path.
+  {
+    constexpr std::uint64_t repeatedKey = 0x1234ABCDULL;
+    const std::vector<std::uint64_t> history = {
+        0x9876ULL, repeatedKey, 0x5555ULL, repeatedKey};
+    const std::vector<std::uint64_t> singleOccurrence = {
+        0x9876ULL, repeatedKey, 0x5555ULL};
+
+    assert(isRepeatedPosition(repeatedKey, history));
+    assert(!isRepeatedPosition(repeatedKey, singleOccurrence));
+    std::cout << "Search-path repetition checks passed.\n";
   }
 
   // Checkmate has no move and a large negative score for the side to move.

@@ -7,10 +7,14 @@
 #include <vector>
 #include <chrono>
 
+bool isRepeatedPosition(std::uint64_t key,
+                        const std::vector<std::uint64_t>& history) {
+  return std::count(history.begin(), history.end(), key) >= 2;
+}
+
 namespace {
 constexpr int MateScore = 30000;
 constexpr int Infinity = 32000;
-
 struct SearchControl{
     std::chrono::steady_clock::time_point deadline;
     bool stopped=false;
@@ -87,10 +91,16 @@ void orderMoves(const Board& board,std::vector<Move>&moves){
 }
 
 int quiescence(Board &board, int alpha,int beta, int ply,
-               std::uint64_t& nodes, SearchControl& control){
+               std::uint64_t& nodes, std::uint64_t& repetitionDraws,
+               std::vector<std::uint64_t>& history,
+               SearchControl& control){
     ++nodes;
     if (control.shouldStop(nodes))
         return 0;
+    if (isRepeatedPosition(zobristHash(board), history)) {
+        ++repetitionDraws;
+        return 0;
+    }
     const bool inCheck=board.isInCheck(board.sideToMove);
     std::vector<Move> moves = board.generateLegalMoves();
 
@@ -125,8 +135,10 @@ int quiescence(Board &board, int alpha,int beta, int ply,
         if(!board.makeMove(move,undo)){
             continue;
         }
-        const int score=
-            -quiescence(board, -beta, -alpha, ply + 1, nodes, control);
+        history.push_back(zobristHash(board));
+        const int score = -quiescence(board, -beta, -alpha, ply + 1,
+                                      nodes, repetitionDraws, history, control);
+        history.pop_back();
 
         board.unmakeMove(undo);
         if (control.stopped)
@@ -146,6 +158,8 @@ int quiescence(Board &board, int alpha,int beta, int ply,
 }
 int negamax(Board& board, int depth, int alpha, int beta,
             int ply, std::uint64_t& nodes, std::uint64_t& transpositionHits,
+            std::uint64_t& repetitionDraws,
+            std::vector<std::uint64_t>& history,
             TranspositionTable& table, SearchControl& control) {
   ++nodes;
   if (control.shouldStop(nodes))
@@ -154,6 +168,10 @@ int negamax(Board& board, int depth, int alpha, int beta,
   const int originalAlpha = alpha;
   const int originalBeta = beta;
   const std::uint64_t key = zobristHash(board);
+  if (isRepeatedPosition(key, history)) {
+    ++repetitionDraws;
+    return 0;
+  }
   TTEntry cached;
   Move tableMove;
   bool hasTableMove = false;
@@ -178,7 +196,8 @@ int negamax(Board& board, int depth, int alpha, int beta,
     return board.isInCheck(board.sideToMove) ? -MateScore + ply : 0;
   }
   if (depth == 0) {
-      return quiescence(board, alpha, beta, ply, nodes, control);
+      return quiescence(board, alpha, beta, ply, nodes,
+                        repetitionDraws, history, control);
   }
   orderMoves(board, moves);
   if (hasTableMove) {
@@ -199,9 +218,11 @@ int negamax(Board& board, int depth, int alpha, int beta,
       continue;
     }
 
-    const int score =
-        -negamax(board, depth - 1, -beta, -alpha, ply + 1, nodes,
-                 transpositionHits, table, control);
+    history.push_back(zobristHash(board));
+    const int score = -negamax(board, depth - 1, -beta, -alpha, ply + 1,
+                                nodes, transpositionHits, repetitionDraws,
+                                history, table, control);
+    history.pop_back();
     board.unmakeMove(undo);
     if (control.stopped)
       return 0;
@@ -252,6 +273,7 @@ SearchResult findBestMove(Board& board, int depth, int timeLimitMs) {
   // Return a legal fallback if time expires before depth one completes.
   result.bestMove = rootMoves.front();
   result.hasMove = true;
+  std::vector<std::uint64_t> history{zobristHash(board)};
 
   Move previousBestMove;
   bool hasPreviousBestMove = false;
@@ -289,9 +311,11 @@ SearchResult findBestMove(Board& board, int depth, int timeLimitMs) {
         continue;
       }
 
-      const int score =
-          -negamax(board, currentDepth - 1, -beta, -alpha, 1, result.nodes,
-                   result.transpositionHits, table, control);
+      history.push_back(zobristHash(board));
+      const int score = -negamax(board, currentDepth - 1, -beta, -alpha, 1,
+                                 result.nodes, result.transpositionHits,
+                                 result.repetitionDraws, history, table, control);
+      history.pop_back();
       board.unmakeMove(undo);
       if (control.stopped)
         break;
