@@ -1,0 +1,26 @@
+CEREBRUM ON LICHESS — STARTUP
+
+1. Build the engine if you have changed its source code:
+
+   cd /Users/gaurav/Desktop/Cerebum
+   make
+
+2. Start the Lichess bot bridge:
+
+   cd /private/tmp/lichess-bot
+   source venv/bin/activate
+   python3 lichess-bot.py -u
+
+3. Leave that Terminal window open. The bot is ready when the log says it is
+   connected and awaiting challenges. Challenge it from your personal account.
+
+4. When you are finished, return to Terminal and press Ctrl+C to stop the bot.
+
+LICHESS LINKS
+
+Lichess:              https://lichess.org/
+Cerebrum bot profile: https://lichess.org/@/gaurav_cerebum
+Challenge page:       https://lichess.org/?any#friend
+
+Use a Standard, Casual challenge to start. Keep your API token private; it is
+stored in the lichess-bot setup and should not be copied into this file.
