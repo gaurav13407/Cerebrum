@@ -21,6 +21,7 @@ struct TTEntry {
 };
 
 std::uint64_t zobristHash(const Board &board);
+std::uint64_t transpositionHash(const Board& board);
 int scoreToTable(int score, int ply);
 int scoreFromTable(int score, int ply);
 

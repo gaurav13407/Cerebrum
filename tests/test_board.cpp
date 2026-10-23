@@ -604,6 +604,7 @@ int main() {
         "8/8/8/8/8/8/8/8 x - - 0 1",  // Invalid active color
         "8/8/8/8/8/8/8/8 w Z - 0 1",  // Invalid castling right
         "8/8/8/8/8/8/8/8 w - i9 0 1", // Invalid en passant square
+        "8/8/8/8/8/8/8/8 w - - -1 1", // Negative halfmove clock
         "8/8/8/8/8/8/8/7 w - - 0 1"   // Rank has the wrong number of squares
     };
 
@@ -614,6 +615,7 @@ int main() {
       assert(board.sideToMove == original.sideToMove);
       assert(board.castlingRights == original.castlingRights);
       assert(board.enPassantSquare == original.enPassantSquare);
+      assert(board.halfmoveClock == original.halfmoveClock);
     }
 
     std::cout << "Invalid FEN checks passed.\n";
@@ -632,6 +634,7 @@ int main() {
       assert(board.sideToMove == original.sideToMove);
       assert(board.castlingRights == original.castlingRights);
       assert(board.enPassantSquare == original.enPassantSquare);
+      assert(board.halfmoveClock == original.halfmoveClock);
     };
 
     Board normalMove;
@@ -651,6 +654,39 @@ int main() {
     checkRoundTrip(promotion, Move{48, 56, Piece::WhiteQueen}); // a7-a8=Q
 
     std::cout << "Make/unmake round-trip checks passed for normal, castling, en passant, and promotion moves.\n";
+  }
+
+  // The FEN halfmove clock updates for pawn moves, quiet moves, and captures,
+  // and is restored by unmaking the move.
+  {
+    Board quietMove;
+    assert(quietMove.loadFEN(
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 99 1"));
+    assert(quietMove.halfmoveClock == 99);
+    UndoInfo quietUndo;
+    assert(quietMove.makeMove(Move{1, 16, Piece::None}, quietUndo)); // Nb1-a3
+    assert(quietMove.halfmoveClock == 100);
+    quietMove.unmakeMove(quietUndo);
+    assert(quietMove.halfmoveClock == 99);
+
+    Board pawnMove;
+    pawnMove.setStartingPosition();
+    pawnMove.halfmoveClock = 42;
+    UndoInfo pawnUndo;
+    assert(pawnMove.makeMove(Move{12, 28, Piece::None}, pawnUndo)); // e2-e4
+    assert(pawnMove.halfmoveClock == 0);
+    pawnMove.unmakeMove(pawnUndo);
+    assert(pawnMove.halfmoveClock == 42);
+
+    Board capture;
+    assert(capture.loadFEN("n6k/8/8/8/8/8/8/R6K w - - 41 1"));
+    UndoInfo captureUndo;
+    assert(capture.makeMove(Move{0, 56, Piece::None}, captureUndo)); // Ra1xa8
+    assert(capture.halfmoveClock == 0);
+    capture.unmakeMove(captureUndo);
+    assert(capture.halfmoveClock == 41);
+
+    std::cout << "Halfmove-clock update and undo checks passed.\n";
   }
 
   // A normal capture must restore the captured piece when the move is undone.
@@ -765,6 +801,19 @@ int main() {
     std::cout << "Transposition-table mate-score checks passed.\n";
   }
 
+  // The board-position hash ignores the halfmove clock; TT keys include it.
+  {
+    Board board;
+    assert(board.loadFEN("4k3/8/8/8/8/8/8/R3K3 w - - 0 1"));
+    const std::uint64_t positionHash = zobristHash(board);
+    const std::uint64_t ttHash = transpositionHash(board);
+
+    assert(board.loadFEN("4k3/8/8/8/8/8/8/R3K3 w - - 50 1"));
+    assert(zobristHash(board) == positionHash);
+    assert(transpositionHash(board) != ttHash);
+    std::cout << "Halfmove-aware transposition hash check passed.\n";
+  }
+
   // A timed search returns a legal move and preserves the board position.
   {
     Board board;
@@ -812,6 +861,28 @@ int main() {
                              result.bestMove.to,
                              result.bestMove.promotion));
     std::cout << "Game-history threefold repetition check passed.\n";
+  }
+
+  // The fifty-move rule ends search as a draw when the halfmove clock reaches 100.
+  {
+    Board board;
+    assert(board.loadFEN("4k3/8/8/8/8/8/8/R3K3 w - - 100 1"));
+    const SearchResult result = findBestMove(board, 4, 1000);
+    assert(result.hasMove);
+    assert(result.score == 0);
+    assert(result.completedDepth == 0);
+    std::cout << "Fifty-move rule search check passed.\n";
+  }
+
+  // King and bishop versus king cannot produce checkmate.
+  {
+    Board board;
+    assert(board.loadFEN("4k3/8/8/8/8/8/8/2B1K3 w - - 0 1"));
+    const SearchResult result = findBestMove(board, 4, 1000);
+    assert(result.hasMove);
+    assert(result.score == 0);
+    assert(result.completedDepth == 0);
+    std::cout << "Insufficient-material search check passed.\n";
   }
 
   // Checkmate has no move and a large negative score for the side to move.

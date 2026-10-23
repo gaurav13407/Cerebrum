@@ -33,6 +33,7 @@ struct ZobristKeys {
     std::uint64_t sideToMove = 0;
     std::uint64_t castling[16]{};
     std::uint64_t enPassantFile[8]{};
+    std::uint64_t halfmoveClock[101]{};
 };
 
 std::uint64_t splitMix64(std::uint64_t& state) {
@@ -59,6 +60,9 @@ const ZobristKeys& getZobristKeys() {
         }
         for (std::uint64_t& file : result.enPassantFile) {
             file = splitMix64(state);
+        }
+        for (std::uint64_t& clock : result.halfmoveClock) {
+            clock = splitMix64(state);
         }
 
         return result;
@@ -93,6 +97,16 @@ std::uint64_t zobristHash(const Board& board) {
     }
 
     return hash;
+}
+
+std::uint64_t transpositionHash(const Board& board) {
+    int clock = board.halfmoveClock;
+    if (clock < 0) {
+        clock = 0;
+    } else if (clock > 100) {
+        clock = 100;
+    }
+    return zobristHash(board) ^ getZobristKeys().halfmoveClock[clock];
 }
 
 TranspositionTable::TranspositionTable(std::size_t capacity)

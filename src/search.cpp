@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <vector>
 #include <chrono>
+#include <bit>
 
 bool isRepeatedPosition(std::uint64_t key,
                         const std::vector<std::uint64_t>& history) {
@@ -44,6 +45,44 @@ int pieceValue(Piece piece){
         case 5:return 0; //King
         default: return 0;
     }
+}
+
+bool isInsufficientMaterial(const Board& board) {
+  const auto& pieces = board.pieces;
+  const std::uint64_t pawns =
+      pieces[static_cast<int>(Piece::WhitePawn)] |
+      pieces[static_cast<int>(Piece::BlackPawn)];
+  const std::uint64_t rooks =
+      pieces[static_cast<int>(Piece::WhiteRook)] |
+      pieces[static_cast<int>(Piece::BlackRook)];
+  const std::uint64_t queens =
+      pieces[static_cast<int>(Piece::WhiteQueen)] |
+      pieces[static_cast<int>(Piece::BlackQueen)];
+
+  if (pawns != 0 || rooks != 0 || queens != 0)
+    return false;
+
+  const int knights = std::popcount(
+      pieces[static_cast<int>(Piece::WhiteKnight)] |
+      pieces[static_cast<int>(Piece::BlackKnight)]);
+  std::uint64_t bishops =
+      pieces[static_cast<int>(Piece::WhiteBishop)] |
+      pieces[static_cast<int>(Piece::BlackBishop)];
+  if (knights + std::popcount(bishops) <= 1)
+    return true;
+  if (knights != 0)
+    return false;
+
+  int bishopSquareColor = -1;
+  while (bishops != 0) {
+    const int square = std::countr_zero(bishops);
+    const int squareColor = ((square / 8) + (square % 8)) & 1;
+    if (bishopSquareColor != -1 && squareColor != bishopSquareColor)
+      return false;
+    bishopSquareColor = squareColor;
+    bishops &= bishops - 1;
+  }
+  return true;
 }
 
 bool isCaptureMove(const Board &board, const  Move& move){
@@ -107,6 +146,8 @@ int quiescence(Board &board, int alpha,int beta, int ply,
     if (moves.empty()) {
         return inCheck ? -MateScore + ply : 0;
     }
+    if (board.halfmoveClock >= 100 || isInsufficientMaterial(board))
+        return 0;
     int bestScore=-Infinity;
 
     if(!inCheck){
@@ -167,8 +208,9 @@ int negamax(Board& board, int depth, int alpha, int beta,
 
   const int originalAlpha = alpha;
   const int originalBeta = beta;
-  const std::uint64_t key = zobristHash(board);
-  if (isRepeatedPosition(key, history)) {
+  const std::uint64_t positionHash = zobristHash(board);
+  const std::uint64_t key = transpositionHash(board);
+  if (isRepeatedPosition(positionHash, history)) {
     ++repetitionDraws;
     return 0;
   }
@@ -195,6 +237,8 @@ int negamax(Board& board, int depth, int alpha, int beta,
   if (moves.empty()) {
     return board.isInCheck(board.sideToMove) ? -MateScore + ply : 0;
   }
+  if (board.halfmoveClock >= 100 || isInsufficientMaterial(board))
+    return 0;
   if (depth == 0) {
       return quiescence(board, alpha, beta, ply, nodes,
                         repetitionDraws, history, control);
@@ -275,6 +319,10 @@ SearchResult findBestMove(
   // Return a legal fallback if time expires before depth one completes.
   result.bestMove = rootMoves.front();
   result.hasMove = true;
+  if (board.halfmoveClock >= 100 || isInsufficientMaterial(board)) {
+    result.score = 0;
+    return result;
+  }
   std::vector<std::uint64_t> history = gameHistory;
   const std::uint64_t currentHash = zobristHash(board);
   if (history.empty() || history.back() != currentHash)

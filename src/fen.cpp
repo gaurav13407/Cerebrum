@@ -18,6 +18,16 @@ bool Board::loadFEN(const std::string &fen){
     Board parsed;
     parsed.clear();
 
+    try {
+        std::size_t charactersRead = 0;
+        parsed.halfmoveClock = std::stoi(halfmoveClock, &charactersRead);
+        if (charactersRead != halfmoveClock.size() || parsed.halfmoveClock < 0) {
+            return false;
+        }
+    } catch (...) {
+        return false;
+    }
+
     int rank=7;
     int file=0;
 

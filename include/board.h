@@ -45,6 +45,7 @@ struct UndoInfo {
   int capturedSquare = -1;
   std::uint8_t previousCastlingRights = 0;
   int previousEnPassantSquare = -1;
+  int previousHalfmoveClock = 0;
   Color previousSideToMove = Color::White;
 };
 
@@ -57,6 +58,7 @@ struct Board {
   std::array<std::uint64_t, 2> occupancy{};
   Color sideToMove = Color::White;
   int enPassantSquare = -1; // Target square for the immediately available en passant capture.
+  int halfmoveClock = 0; // Halfmoves since the last pawn move or capture.
 
   void clear();
   void setStartingPosition();

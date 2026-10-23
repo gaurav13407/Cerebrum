@@ -214,6 +214,7 @@ bool Board::makeMove(const Move& move, UndoInfo& undo) {
   undo.capturedSquare = to;
   undo.previousCastlingRights = castlingRights;
   undo.previousEnPassantSquare = enPassantSquare;
+  undo.previousHalfmoveClock = halfmoveClock;
   undo.previousSideToMove = sideToMove;
 
   const int fileDifference = (to % 8) - (from % 8);
@@ -281,6 +282,13 @@ bool Board::makeMove(const Move& move, UndoInfo& undo) {
       std::abs(to - from) == 16) {
     enPassantSquare = (from + to) / 2;
   }
+  const bool movedPawn = movingPiece == Piece::WhitePawn ||
+                         movingPiece == Piece::BlackPawn;
+  if (movedPawn || undo.capturedPiece != Piece::None) {
+    halfmoveClock = 0;
+  } else {
+    ++halfmoveClock;
+  }
   sideToMove = (sideToMove == Color::White) ? Color::Black : Color::White;
   return true;
 }
@@ -309,6 +317,7 @@ void Board::unmakeMove(const UndoInfo& undo) {
 
   castlingRights = undo.previousCastlingRights;
   enPassantSquare = undo.previousEnPassantSquare;
+  halfmoveClock = undo.previousHalfmoveClock;
   sideToMove = undo.previousSideToMove;
 }
 
@@ -317,6 +326,7 @@ void Board::clear() {
   occupancy.fill(0);
   sideToMove = Color::White;
   enPassantSquare = -1;
+  halfmoveClock = 0;
   castlingRights = 0;
 }
 //FEN loading to test all chess position
