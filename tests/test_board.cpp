@@ -747,6 +747,23 @@ int main() {
     std::cout << "Zobrist hashing and transposition-table checks passed.\n";
   }
 
+  // Mate scores are normalized in the table and adjusted for the current search ply.
+  {
+    const int winningMateAtPlyFive = 30000 - 5;
+    const int losingMateAtPlyFive = -30000 + 5;
+
+    const int storedWin = scoreToTable(winningMateAtPlyFive, 5);
+    const int storedLoss = scoreToTable(losingMateAtPlyFive, 5);
+    assert(storedWin == 30000);
+    assert(storedLoss == -30000);
+    assert(scoreFromTable(storedWin, 9) == 30000 - 9);
+    assert(scoreFromTable(storedLoss, 9) == -30000 + 9);
+
+    assert(scoreToTable(450, 5) == 450);
+    assert(scoreFromTable(450, 9) == 450);
+    std::cout << "Transposition-table mate-score checks passed.\n";
+  }
+
   // A timed search returns a legal move and preserves the board position.
   {
     Board board;

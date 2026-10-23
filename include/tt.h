@@ -21,6 +21,8 @@ struct TTEntry {
 };
 
 std::uint64_t zobristHash(const Board &board);
+int scoreToTable(int score, int ply);
+int scoreFromTable(int score, int ply);
 
 class TranspositionTable {
 public:

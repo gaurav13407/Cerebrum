@@ -3,6 +3,31 @@
 #include <bit>
 
 namespace {
+constexpr int MateScore = 30000;
+constexpr int MateScoreThreshold = MateScore - 1000;
+}
+
+int scoreToTable(int score, int ply) {
+    if (score > MateScoreThreshold) {
+        return score + ply;
+    }
+    if (score < -MateScoreThreshold) {
+        return score - ply;
+    }
+    return score;
+}
+
+int scoreFromTable(int score, int ply) {
+    if (score > MateScoreThreshold) {
+        return score - ply;
+    }
+    if (score < -MateScoreThreshold) {
+        return score + ply;
+    }
+    return score;
+}
+
+namespace {
 struct ZobristKeys {
     std::uint64_t pieces[12][64]{};
     std::uint64_t sideToMove = 0;

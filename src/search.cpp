@@ -164,10 +164,11 @@ int negamax(Board& board, int depth, int alpha, int beta,
     hasTableMove = true;
 
     if (cached.depth >= depth) {
+        const int cachedScore=scoreFromTable(cached.score, ply);
       if (cached.bound == TTBound::Exact ||
-          (cached.bound == TTBound::LowerBound && cached.score >= beta) ||
-          (cached.bound == TTBound::UpperBound && cached.score <= alpha)) {
-        return cached.score;
+          (cached.bound == TTBound::LowerBound && cachedScore >= beta) ||
+          (cached.bound == TTBound::UpperBound && cachedScore <= alpha)) {
+        return cachedScore;
       }
     }
   }
@@ -219,7 +220,7 @@ int negamax(Board& board, int depth, int alpha, int beta,
 
   TTEntry entry;
   entry.depth = depth;
-  entry.score = bestScore;
+  entry.score = scoreToTable(bestScore,ply);
   entry.bestMove = bestMove;
   entry.bound = bestScore <= originalAlpha ? TTBound::UpperBound
                 : bestScore >= originalBeta ? TTBound::LowerBound
