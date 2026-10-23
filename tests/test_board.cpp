@@ -863,6 +863,20 @@ int main() {
     std::cout << "Game-history threefold repetition check passed.\n";
   }
 
+  // Five occurrences in the supplied game history also produce a draw.
+  {
+    Board board;
+    board.setStartingPosition();
+    const std::uint64_t currentHash = zobristHash(board);
+    const std::vector<std::uint64_t> gameHistory(5, currentHash);
+
+    const SearchResult result = findBestMove(board, 4, 1000, gameHistory);
+    assert(result.hasMove);
+    assert(result.score == 0);
+    assert(result.completedDepth == 0);
+    std::cout << "Fivefold-repetition check passed.\n";
+  }
+
   // The fifty-move rule ends search as a draw when the halfmove clock reaches 100.
   {
     Board board;
@@ -872,6 +886,17 @@ int main() {
     assert(result.score == 0);
     assert(result.completedDepth == 0);
     std::cout << "Fifty-move rule search check passed.\n";
+  }
+
+  // At 150 halfmoves the automatic seventy-five-move draw is also recognized.
+  {
+    Board board;
+    assert(board.loadFEN("4k3/8/8/8/8/8/8/R3K3 w - - 150 1"));
+    const SearchResult result = findBestMove(board, 4, 1000);
+    assert(result.hasMove);
+    assert(result.score == 0);
+    assert(result.completedDepth == 0);
+    std::cout << "Seventy-five-move rule check passed.\n";
   }
 
   // King and bishop versus king cannot produce checkmate.
@@ -902,6 +927,32 @@ int main() {
     assert(!result.hasMove);
     assert(result.score == 0);
     std::cout << "Checkmate and stalemate search checks passed.\n";
+  }
+
+  // Search finds a move that checkmates immediately.
+  {
+    Board board;
+    assert(board.loadFEN("7k/6pp/5KQ1/8/8/8/8/8 w - - 0 1"));
+    const SearchResult result = findBestMove(board, 3, 1000);
+
+    assert(result.hasMove);
+    assert(result.score > 29000);
+    assert(result.bestMove.from == 46); // Qg6
+    assert(result.bestMove.to == 54);   // Qxg7#
+    std::cout << "Mate-in-one search check passed.\n";
+  }
+
+  // Search captures the queen that threatens Qg2 mate.
+  {
+    Board board;
+    assert(board.loadFEN("k5r1/8/8/8/8/6q1/5B2/7K w - - 0 1"));
+    const SearchResult result = findBestMove(board, 3, 1000);
+
+    assert(result.hasMove);
+    assert(result.bestMove.from == 13); // Bishop f2
+    assert(result.bestMove.to == 22);   // captures queen on g3
+    assert(result.score > -29000);
+    std::cout << "Immediate mate-threat defense check passed.\n";
   }
 
   std::cout << "All move, attack, king-safety, castling, and move-generation checks passed.\n";
