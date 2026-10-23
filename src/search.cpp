@@ -13,40 +13,6 @@ bool isRepeatedPosition(std::uint64_t key,
   return std::count(history.begin(), history.end(), key) >= 2;
 }
 
-namespace {
-constexpr int MateScore = 30000;
-constexpr int Infinity = 32000;
-struct SearchControl{
-    std::chrono::steady_clock::time_point deadline;
-    bool stopped=false;
-
-    bool shouldStop(std::uint64_t nodes){
-        if(stopped){
-            return true;
-        }
-        //Check clock every 1024 nodes to avoide checking it on every node.
-        if((nodes& 1023u)==0 &&
-                std::chrono::steady_clock::now() >=deadline){
-            stopped =true;
-        }
-        return stopped;
-    }
-};
-int pieceValue(Piece piece){
-    if(piece==Piece::None){
-        return 0;
-    }
-    switch(static_cast<int>(piece)%6){
-        case 0:return 100; // pawn
-        case 1:return 320; //Knight
-        case 2:return 330; //Bishop
-        case 3:return 500; //Rook
-        case 4:return 900; //Queen
-        case 5:return 0; //King
-        default: return 0;
-    }
-}
-
 bool isInsufficientMaterial(const Board& board) {
   const auto& pieces = board.pieces;
   const std::uint64_t pawns =
@@ -83,6 +49,40 @@ bool isInsufficientMaterial(const Board& board) {
     bishops &= bishops - 1;
   }
   return true;
+}
+
+namespace {
+constexpr int MateScore = 30000;
+constexpr int Infinity = 32000;
+struct SearchControl{
+    std::chrono::steady_clock::time_point deadline;
+    bool stopped=false;
+
+    bool shouldStop(std::uint64_t nodes){
+        if(stopped){
+            return true;
+        }
+        //Check clock every 1024 nodes to avoide checking it on every node.
+        if((nodes& 1023u)==0 &&
+                std::chrono::steady_clock::now() >=deadline){
+            stopped =true;
+        }
+        return stopped;
+    }
+};
+int pieceValue(Piece piece){
+    if(piece==Piece::None){
+        return 0;
+    }
+    switch(static_cast<int>(piece)%6){
+        case 0:return 100; // pawn
+        case 1:return 320; //Knight
+        case 2:return 330; //Bishop
+        case 3:return 500; //Rook
+        case 4:return 900; //Queen
+        case 5:return 0; //King
+        default: return 0;
+    }
 }
 
 bool isCaptureMove(const Board &board, const  Move& move){

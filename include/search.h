@@ -19,3 +19,4 @@ SearchResult findBestMove(
     const std::vector<std::uint64_t>& gameHistory = {});
 bool isRepeatedPosition(std::uint64_t key,
                         const std::vector<std::uint64_t>& history);
+bool isInsufficientMaterial(const Board& board);
