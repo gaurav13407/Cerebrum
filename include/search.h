@@ -12,6 +12,10 @@ struct SearchResult{
     bool hasMove=false;
     int completedDepth=0;
 };
-SearchResult findBestMove(Board& board, int depth, int timeLimitMs=1000);
+SearchResult findBestMove(
+    Board& board,
+    int depth,
+    int timeLimitMs = 1000,
+    const std::vector<std::uint64_t>& gameHistory = {});
 bool isRepeatedPosition(std::uint64_t key,
                         const std::vector<std::uint64_t>& history);

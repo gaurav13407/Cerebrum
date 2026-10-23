@@ -252,7 +252,9 @@ int negamax(Board& board, int depth, int alpha, int beta,
 }
 } // namespace
 
-SearchResult findBestMove(Board& board, int depth, int timeLimitMs) {
+SearchResult findBestMove(
+    Board& board, int depth, int timeLimitMs,
+    const std::vector<std::uint64_t>& gameHistory) {
   static TranspositionTable table;
   SearchResult result;
   if (depth < 1) {
@@ -273,7 +275,16 @@ SearchResult findBestMove(Board& board, int depth, int timeLimitMs) {
   // Return a legal fallback if time expires before depth one completes.
   result.bestMove = rootMoves.front();
   result.hasMove = true;
-  std::vector<std::uint64_t> history{zobristHash(board)};
+  std::vector<std::uint64_t> history = gameHistory;
+  const std::uint64_t currentHash = zobristHash(board);
+  if (history.empty() || history.back() != currentHash)
+    history.push_back(currentHash);
+
+  // Three occurrences including the current position allow a draw claim.
+  if (std::count(history.begin(), history.end(), currentHash) >= 3) {
+    result.score = 0;
+    return result;
+  }
 
   Move previousBestMove;
   bool hasPreviousBestMove = false;

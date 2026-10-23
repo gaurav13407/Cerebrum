@@ -796,6 +796,24 @@ int main() {
     std::cout << "Search-path repetition checks passed.\n";
   }
 
+  // Search recognizes three occurrences of the current position in game history.
+  {
+    Board board;
+    board.setStartingPosition();
+    const std::uint64_t currentHash = zobristHash(board);
+    const std::vector<std::uint64_t> gameHistory = {
+        currentHash, currentHash, currentHash};
+
+    const SearchResult result = findBestMove(board, 4, 1000, gameHistory);
+    assert(result.hasMove);
+    assert(result.score == 0);
+    assert(result.completedDepth == 0);
+    assert(board.isLegalMove(result.bestMove.from,
+                             result.bestMove.to,
+                             result.bestMove.promotion));
+    std::cout << "Game-history threefold repetition check passed.\n";
+  }
+
   // Checkmate has no move and a large negative score for the side to move.
   {
     Board board;
