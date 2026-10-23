@@ -1,6 +1,7 @@
 #include "board.h"
 #include "search.h"
 #include "tt.h"
+#include "uci.h"
 
 #include <algorithm>
 #include <cctype>
@@ -63,7 +64,10 @@ std::string moveText(const Move& move) {
 }
 } // namespace
 
-int main() {
+int main(int argc, char** argv) {
+  if (argc < 2 || std::string(argv[1]) != "--console")
+    return runUci();
+
   constexpr int SearchDepth = 6;
   constexpr int SearchTimeMs = 1000;
 

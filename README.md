@@ -1,8 +1,8 @@
 # ♟️ Cerebrum Chess Engine
 
-A UCI-compatible chess engine written in C++ from scratch.  
-Uses bitboard board representation, alpha-beta pruning with iterative  
-deepening, and a hand-tuned evaluation function.
+A chess engine written in C++ from scratch. It uses bitboards, legal move
+generation, iterative-deepening alpha-beta search, quiescence search, and a
+transposition table.
 
 ---
 
@@ -12,11 +12,10 @@ deepening, and a hand-tuned evaluation function.
 - **Legal move generation** — all piece types including castling, en passant, promotions
 - **Alpha-Beta search** with iterative deepening
 - **Transposition table** using Zobrist hashing
-- **Move ordering** — MVV-LVA, killer moves, history heuristic
+- **Move ordering** — search move ordering heuristics
 - **Quiescence search** — avoids horizon effect on captures
-- **Null move pruning** and **Late Move Reductions (LMR)**
-- **Evaluation** — material, piece-square tables, pawn structure, king safety
-- **UCI protocol** — works with Arena, CuteChess, Lichess bot
+- **Evaluation** — current basic material and positional evaluation
+- **UCI protocol** — supports UCI GUIs such as Arena and Cute Chess
 
 ---
 
@@ -32,18 +31,18 @@ make -j$(nproc)
 
 ## Usage
 
-Run with any UCI-compatible GUI (Arena, CuteChess):
+Build, then select the `cerebrum` executable in a UCI-compatible GUI (such as
+Arena or Cute Chess). The engine speaks UCI by default.
 
 ```bash
 ./cerebrum
 ```
 
-Or use via UCI commands directly:
+For a simple terminal game against the engine, run:
 
-uci
-isready
-position startpos moves e2e4 e7e5
-go depth 10
+```bash
+./cerebrum --console
+```
 
 ---
 
@@ -65,7 +64,7 @@ src/
 - [x] Move generation
 - [x] Alpha-beta search
 - [x] Transposition table
-- [x] UCI protocol
+- [x] Basic UCI protocol
 - [ ] NNUE evaluation
 - [ ] Endgame tablebases (Syzygy)
 - [ ] Lichess bot deployment
