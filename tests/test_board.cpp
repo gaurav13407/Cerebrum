@@ -747,6 +747,24 @@ int main() {
     std::cout << "Zobrist hashing and transposition-table checks passed.\n";
   }
 
+  // A timed search returns a legal move and preserves the board position.
+  {
+    Board board;
+    board.setStartingPosition();
+    const Board original = board;
+
+    const SearchResult result = findBestMove(board, 30, 1);
+    assert(result.hasMove);
+    assert(board.isLegalMove(result.bestMove.from,
+                             result.bestMove.to,
+                             result.bestMove.promotion));
+    assert(board.pieces == original.pieces);
+    assert(board.occupancy == original.occupancy);
+    assert(board.sideToMove == original.sideToMove);
+    std::cout << "Timed search check passed (completed depth: "
+              << result.completedDepth << ").\n";
+  }
+
   // Checkmate has no move and a large negative score for the side to move.
   {
     Board board;

@@ -5,11 +5,28 @@
 #include <cmath>
 #include <cstdint>
 #include <vector>
+#include <chrono>
 
 namespace {
 constexpr int MateScore = 30000;
 constexpr int Infinity = 32000;
 
+struct SearchControl{
+    std::chrono::steady_clock::time_point deadline;
+    bool stopped=false;
+
+    bool shouldStop(std::uint64_t nodes){
+        if(stopped){
+            return true;
+        }
+        //Check clock every 1024 nodes to avoide checking it on every node.
+        if((nodes& 1023u)==0 &&
+                std::chrono::steady_clock::now() >=deadline){
+            stopped =true;
+        }
+        return stopped;
+    }
+};
 int pieceValue(Piece piece){
     if(piece==Piece::None){
         return 0;
@@ -69,8 +86,11 @@ void orderMoves(const Board& board,std::vector<Move>&moves){
             });
 }
 
-int quiescence(Board &board, int alpha,int beta, int ply, std::uint64_t& nodes){
+int quiescence(Board &board, int alpha,int beta, int ply,
+               std::uint64_t& nodes, SearchControl& control){
     ++nodes;
+    if (control.shouldStop(nodes))
+        return 0;
     const bool inCheck=board.isInCheck(board.sideToMove);
     std::vector<Move> moves = board.generateLegalMoves();
 
@@ -106,9 +126,11 @@ int quiescence(Board &board, int alpha,int beta, int ply, std::uint64_t& nodes){
             continue;
         }
         const int score=
-            -quiescence(board, -beta, -alpha, ply + 1, nodes);
+            -quiescence(board, -beta, -alpha, ply + 1, nodes, control);
 
         board.unmakeMove(undo);
+        if (control.stopped)
+            return 0;
 
         if(score>bestScore){
             bestScore=score;
@@ -124,8 +146,10 @@ int quiescence(Board &board, int alpha,int beta, int ply, std::uint64_t& nodes){
 }
 int negamax(Board& board, int depth, int alpha, int beta,
             int ply, std::uint64_t& nodes, std::uint64_t& transpositionHits,
-            TranspositionTable& table) {
+            TranspositionTable& table, SearchControl& control) {
   ++nodes;
+  if (control.shouldStop(nodes))
+    return 0;
 
   const int originalAlpha = alpha;
   const int originalBeta = beta;
@@ -153,7 +177,7 @@ int negamax(Board& board, int depth, int alpha, int beta,
     return board.isInCheck(board.sideToMove) ? -MateScore + ply : 0;
   }
   if (depth == 0) {
-      return quiescence(board, alpha, beta, ply, nodes);
+      return quiescence(board, alpha, beta, ply, nodes, control);
   }
   orderMoves(board, moves);
   if (hasTableMove) {
@@ -176,8 +200,10 @@ int negamax(Board& board, int depth, int alpha, int beta,
 
     const int score =
         -negamax(board, depth - 1, -beta, -alpha, ply + 1, nodes,
-                 transpositionHits, table);
+                 transpositionHits, table, control);
     board.unmakeMove(undo);
+    if (control.stopped)
+      return 0;
 
     if (score > bestScore) {
       bestScore = score;
@@ -204,18 +230,27 @@ int negamax(Board& board, int depth, int alpha, int beta,
 }
 } // namespace
 
-SearchResult findBestMove(Board& board, int depth) {
+SearchResult findBestMove(Board& board, int depth, int timeLimitMs) {
   static TranspositionTable table;
   SearchResult result;
   if (depth < 1) {
     depth = 1;
   }
+  if (timeLimitMs < 1)
+    timeLimitMs = 1;
+
+  SearchControl control;
+  control.deadline = std::chrono::steady_clock::now() +
+                     std::chrono::milliseconds(timeLimitMs);
 
   const std::vector<Move> rootMoves = board.generateLegalMoves();
   if (rootMoves.empty()) {
     result.score = board.isInCheck(board.sideToMove) ? -MateScore : 0;
     return result;
   }
+  // Return a legal fallback if time expires before depth one completes.
+  result.bestMove = rootMoves.front();
+  result.hasMove = true;
 
   Move previousBestMove;
   bool hasPreviousBestMove = false;
@@ -244,6 +279,10 @@ SearchResult findBestMove(Board& board, int depth) {
     bool foundMove = false;
 
     for (const Move& move : moves) {
+      if (std::chrono::steady_clock::now() >= control.deadline) {
+        control.stopped = true;
+        break;
+      }
       UndoInfo undo;
       if (!board.makeMove(move, undo)) {
         continue;
@@ -251,8 +290,10 @@ SearchResult findBestMove(Board& board, int depth) {
 
       const int score =
           -negamax(board, currentDepth - 1, -beta, -alpha, 1, result.nodes,
-                   result.transpositionHits, table);
+                   result.transpositionHits, table, control);
       board.unmakeMove(undo);
+      if (control.stopped)
+        break;
 
       if (!foundMove || score > bestScore) {
         bestScore = score;
@@ -263,6 +304,10 @@ SearchResult findBestMove(Board& board, int depth) {
         alpha = score;
       }
     }
+
+    // Never publish a score from an iteration that did not finish.
+    if (control.stopped)
+      break;
 
     if (!foundMove) {
       break;

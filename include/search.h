@@ -10,4 +10,4 @@ struct SearchResult{
     bool hasMove=false;
     int completedDepth=0;
 };
-SearchResult findBestMove(Board& board, int depth);
+SearchResult findBestMove(Board& board, int depth, int timeLimitMs=1000);
