@@ -5,16 +5,27 @@ CEREBRUM ON LICHESS — STARTUP
    cd /Users/gaurav/Desktop/Cerebum
    make
 
-2. Start the Lichess bot bridge:
+2. Save the token once in lichess-bot's local configuration:
 
    cd /private/tmp/lichess-bot
+   nano config.yml
+
+   Replace the first line's placeholder with your bot API token, keeping it
+   between the quotation marks, then save with Ctrl+O, Return, Ctrl+X.
+   The file is excluded by lichess-bot's .gitignore. Restrict it to your user:
+
+   chmod 600 config.yml
+
+3. Start the Lichess bot bridge:
+   cd /private/tmp/lichess-bot
    source venv/bin/activate
+   unset LICHESS_BOT_TOKEN
    python3 lichess-bot.py -u
 
-3. Leave that Terminal window open. The bot is ready when the log says it is
+4. Leave that Terminal window open. The bot is ready when the log says it is
    connected and awaiting challenges. Challenge it from your personal account.
 
-4. When you are finished, return to Terminal and press Ctrl+C to stop the bot.
+5. When you are finished, return to Terminal and press Ctrl+C to stop the bot.
 
 LICHESS LINKS
 
@@ -22,5 +33,6 @@ Lichess:              https://lichess.org/
 Cerebrum bot profile: https://lichess.org/@/gaurav_cerebum
 Challenge page:       https://lichess.org/?any#friend
 
-Use a Standard, Casual challenge to start. Keep your API token private; it is
-stored in the lichess-bot setup and should not be copied into this file.
+Use a Standard, Casual challenge to start. The token must have the "Play games
+with the bot API" (bot:play) permission. Keep it private; it belongs only in
+lichess-bot's ignored local config.yml and should not be copied into this file.
